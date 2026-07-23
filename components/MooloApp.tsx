@@ -55,10 +55,8 @@ export function MooloApp() {
           key="welcome"
           {...screenMotion}
         >
-          <div className="welcome-glow welcome-glow-one" />
-          <div className="welcome-glow welcome-glow-two" />
           <nav className="welcome-nav">
-            <Brand />
+            <Brand showMascot={false} />
             <span className="builders-pill">
               <ShieldCheck size={14} aria-hidden="true" />
               Rialo Builders Hub
@@ -120,7 +118,7 @@ export function MooloApp() {
           {...screenMotion}
         >
           <section className="unlock-card">
-            <Brand />
+            <Brand showMascot={false} />
             <div className="unlock-mascot">
               <MooloMascot state="waiting" size="large" />
             </div>

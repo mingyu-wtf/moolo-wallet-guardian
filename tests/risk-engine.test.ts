@@ -53,14 +53,68 @@ test("denies an AI agent request beyond its daily limit", () => {
 
   assert.equal(result.score, 65);
   assert.equal(result.level, "High");
-  assert.equal(result.decision, "timelock");
+  assert.equal(result.decision, "block");
+});
+
+test("blocks an unknown unlimited-approval contract even at medium risk", () => {
+  const result = calculateRisk({
+    amount: 0,
+    token: "USDC",
+    addressType: "contract",
+    settings: DEFAULT_SETTINGS,
+  });
+
+  assert.equal(result.score, 45);
+  assert.equal(result.level, "Medium");
+  assert.equal(result.decision, "block");
+});
+
+test("keeps critical phishing blocking when optional protection is off", () => {
+  const settings = {
+    ...DEFAULT_SETTINGS,
+    protectionEnabled: false,
+    blockSuspiciousAddresses: false,
+  };
+  const phishing = calculateRisk({
+    amount: 1,
+    token: "USDC",
+    addressType: "phishing",
+    settings,
+  });
+  const ordinary = calculateRisk({
+    amount: 5000,
+    token: "USDC",
+    addressType: "new",
+    settings,
+  });
+
+  assert.equal(phishing.decision, "block");
+  assert.equal(phishing.level, "Critical");
+  assert.equal(ordinary.decision, "allow");
+  assert.match(ordinary.reasons.join(" "), /Protection is off/);
+});
+
+test("caps combined risk signals at 100", () => {
+  const result = calculateRisk({
+    amount: 5000,
+    token: "USDC",
+    addressType: "phishing",
+    settings: DEFAULT_SETTINGS,
+    isAgent: true,
+    compromised: true,
+  });
+
+  assert.equal(result.score, 100);
+  assert.equal(result.level, "Critical");
 });
 
 test("maps boundary scores to the expected risk level", () => {
   assert.equal(getRiskLevel(0), "Low");
   assert.equal(getRiskLevel(29), "Low");
   assert.equal(getRiskLevel(30), "Medium");
+  assert.equal(getRiskLevel(59), "Medium");
   assert.equal(getRiskLevel(60), "High");
+  assert.equal(getRiskLevel(79), "High");
   assert.equal(getRiskLevel(80), "Critical");
   assert.equal(getRiskLevel(100), "Critical");
 });

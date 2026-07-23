@@ -78,6 +78,7 @@ export const INITIAL_ACTIVITY: DemoTransaction[] = [
     riskScore: 5,
     riskLevel: "Low",
     reasons: ["Trusted address"],
+    policies: ["Address reputation", "Reactive decision"],
     createdAt: Date.now() - 1000 * 60 * 42,
   },
 ];

@@ -24,7 +24,12 @@ import { MooloMascot } from "@/components/moolo/MooloMascot";
 import { SimulationNotice } from "@/components/security/SimulationNotice";
 import { StatusBadge } from "@/components/security/StatusBadge";
 import { ADDRESSES, SECURITY_STEPS, TOKEN_PRICES } from "@/lib/constants";
-import { formatCurrency, shortAddress } from "@/lib/simulation";
+import {
+  createDemoTransaction,
+  formatCurrency,
+  formatDateTime,
+  shortAddress,
+} from "@/lib/simulation";
 import { useWalletStore } from "@/store/wallet-store";
 import type { DemoTransaction, RiskAssessment } from "@/types";
 
@@ -41,7 +46,8 @@ export type SecurityExperienceState =
   | { kind: "frozen"; transaction: DemoTransaction }
   | { kind: "activity"; transaction: DemoTransaction }
   | { kind: "receive" }
-  | { kind: "swap" };
+  | { kind: "swap" }
+  | { kind: "reset-confirm" };
 
 interface SecurityExperienceProps {
   experience: SecurityExperienceState;
@@ -96,6 +102,15 @@ export function SecurityExperience({
   onChange,
 }: SecurityExperienceProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    returnFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    return () => returnFocusRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -167,8 +182,8 @@ export function SecurityExperience({
         )}
         {experience.kind === "frozen" && (
           <FrozenExperience
-            transaction={experience.transaction}
             onClose={onClose}
+            onChange={onChange}
           />
         )}
         {experience.kind === "activity" && (
@@ -179,6 +194,9 @@ export function SecurityExperience({
         )}
         {experience.kind === "receive" && <ReceiveExperience onClose={onClose} />}
         {experience.kind === "swap" && <SwapExperience onClose={onClose} />}
+        {experience.kind === "reset-confirm" && (
+          <ResetExperience onClose={onClose} />
+        )}
       </motion.section>
     </div>
   );
@@ -196,6 +214,8 @@ function AnalysisExperience({
   onChange: (experience: SecurityExperienceState) => void;
 }) {
   const [completedSteps, setCompletedSteps] = useState(0);
+  const [actionPending, setActionPending] = useState(false);
+  const [actionError, setActionError] = useState("");
   const processedRef = useRef(false);
   const confirmTransaction = useWalletStore(
     (state) => state.confirmTransaction,
@@ -234,14 +254,30 @@ function AnalysisExperience({
   ]);
 
   const startDelay = () => {
-    startTimeLock(transaction);
-    onChange({ kind: "timelock" });
+    if (actionPending) return;
+    setActionPending(true);
+    if (startTimeLock(transaction)) {
+      onChange({ kind: "timelock" });
+    } else {
+      setActionPending(false);
+      setActionError(
+        "This protected flow could not start. Finish the current request or reset the demo balance.",
+      );
+    }
   };
 
   const requestGuardian = () => {
-    startTimeLock(transaction);
-    setAwaitingGuardian();
-    onChange({ kind: "guardian" });
+    if (actionPending) return;
+    setActionPending(true);
+    if (startTimeLock(transaction)) {
+      setAwaitingGuardian();
+      onChange({ kind: "guardian" });
+    } else {
+      setActionPending(false);
+      setActionError(
+        "Guardian review could not start. Finish the current request or reset the demo balance.",
+      );
+    }
   };
 
   if (!analysisDone) {
@@ -325,15 +361,35 @@ function AnalysisExperience({
       </div>
       {assessment.decision === "timelock" ? (
         <div className="modal-action-stack">
-          <button className="primary-button full-button" onClick={startDelay}>
+          {actionError && (
+            <p className="field-error" role="alert">
+              {actionError}
+            </p>
+          )}
+          <button
+            className="primary-button full-button"
+            onClick={startDelay}
+            disabled={actionPending}
+          >
             <Clock3 size={17} aria-hidden="true" />
             Start Security Delay
           </button>
-          <button className="secondary-button full-button" onClick={requestGuardian}>
+          <button
+            className="secondary-button full-button"
+            onClick={requestGuardian}
+            disabled={actionPending}
+          >
             <UserRoundCheck size={17} aria-hidden="true" />
             Request Guardian Approval
           </button>
-          <button className="text-button" onClick={onClose}>
+          <button
+            className="text-button"
+            onClick={() => {
+              addActivity({ ...transaction, status: "Cancelled" });
+              onClose();
+            }}
+            disabled={actionPending}
+          >
             Cancel Transfer
           </button>
         </div>
@@ -342,9 +398,12 @@ function AnalysisExperience({
           <button
             className="primary-button full-button"
             onClick={() => {
+              if (actionPending) return;
+              setActionPending(true);
               confirmTransaction(transaction);
               onClose();
             }}
+            disabled={actionPending}
           >
             <BadgeCheck size={17} aria-hidden="true" />
             Confirm After Review
@@ -372,17 +431,25 @@ function TimeLockExperience({
   onChange: (experience: SecurityExperienceState) => void;
 }) {
   const pending = useWalletStore((state) => state.pendingTransfer);
+  const activity = useWalletStore((state) => state.activity);
   const cancelPending = useWalletStore((state) => state.cancelPending);
-  const completeTimeLock = useWalletStore((state) => state.completeTimeLock);
   const setAwaitingGuardian = useWalletStore(
     (state) => state.setAwaitingGuardian,
   );
   const [now, setNow] = useState(0);
-  const [completed, setCompleted] = useState(false);
-  const completedRef = useRef(false);
+  const [trackedPendingId] = useState(pending?.transaction.id ?? null);
+  const completed = trackedPendingId
+    ? activity.some(
+        (item) =>
+          item.id === trackedPendingId && item.status === "Confirmed",
+      )
+    : false;
   const remaining = pending
     ? now === 0
-      ? useWalletStore.getState().settings.timeLockSeconds
+      ? Math.max(
+          0,
+          Math.ceil((pending.endsAt - pending.startedAt) / 1000),
+        )
       : Math.max(0, Math.ceil((pending.endsAt - now) / 1000))
     : 0;
 
@@ -394,13 +461,6 @@ function TimeLockExperience({
       window.clearInterval(timer);
     };
   }, []);
-
-  useEffect(() => {
-    if (!pending || remaining > 0 || completedRef.current) return;
-    completedRef.current = true;
-    completeTimeLock();
-    setCompleted(true);
-  }, [completeTimeLock, pending, remaining]);
 
   if (completed) {
     return (
@@ -438,8 +498,8 @@ function TimeLockExperience({
     100,
     Math.max(
       0,
-      ((useWalletStore.getState().settings.timeLockSeconds - remaining) /
-        useWalletStore.getState().settings.timeLockSeconds) *
+      ((pending.endsAt - pending.startedAt - remaining * 1_000) /
+        (pending.endsAt - pending.startedAt)) *
         100,
     ),
   );
@@ -469,8 +529,7 @@ function TimeLockExperience({
         </DetailRow>
         <DetailRow label="Started">
           {new Date(
-            pending.endsAt -
-              useWalletStore.getState().settings.timeLockSeconds * 1000,
+            pending.startedAt,
           ).toLocaleTimeString("en-US", {
             hour: "2-digit",
             minute: "2-digit",
@@ -508,6 +567,7 @@ function GuardianExperience({ onClose }: { onClose: () => void }) {
   const approvePending = useWalletStore((state) => state.approvePending);
   const cancelPending = useWalletStore((state) => state.cancelPending);
   const [result, setResult] = useState<"approved" | "rejected" | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   if (result) {
     return (
@@ -580,9 +640,12 @@ function GuardianExperience({ onClose }: { onClose: () => void }) {
       <button
         className="primary-button full-button"
         onClick={() => {
+          if (submitting) return;
+          setSubmitting(true);
           approvePending();
           setResult("approved");
         }}
+        disabled={submitting}
       >
         <BadgeCheck size={17} aria-hidden="true" />
         Approve as Guardian
@@ -590,9 +653,12 @@ function GuardianExperience({ onClose }: { onClose: () => void }) {
       <button
         className="danger-button full-button"
         onClick={() => {
+          if (submitting) return;
+          setSubmitting(true);
           cancelPending();
           setResult("rejected");
         }}
+        disabled={submitting}
       >
         Reject Transfer
       </button>
@@ -655,6 +721,9 @@ function AgentExperience({
   transaction: DemoTransaction;
   onClose: () => void;
 }) {
+  const dailyLimit = useWalletStore(
+    (state) => state.settings.aiAgentDailyLimit,
+  );
   return (
     <div className="modal-content agent-content">
       <div className="agent-mark">
@@ -674,7 +743,7 @@ function AgentExperience({
         <ChevronRight size={18} aria-hidden="true" />
         <div>
           <span>Daily limit</span>
-          <strong>10 USDC</strong>
+          <strong>{dailyLimit.toLocaleString()} USDC</strong>
         </div>
       </div>
       <div className="decision-banner decision-denied">
@@ -690,20 +759,23 @@ function AgentExperience({
 }
 
 function FrozenExperience({
-  transaction,
   onClose,
+  onChange,
 }: {
-  transaction: DemoTransaction;
   onClose: () => void;
+  onChange: (experience: SecurityExperienceState) => void;
 }) {
   const protectionState = useWalletStore((state) => state.protectionState);
+  const walletAddress = useWalletStore((state) => state.walletAddress);
+  const recovery = useWalletStore((state) => state.recovery);
   const beginRecovery = useWalletStore((state) => state.beginRecovery);
   const completeRecovery = useWalletStore((state) => state.completeRecovery);
-  const resetDemo = useWalletStore((state) => state.resetDemo);
-  const [step, setStep] = useState(0);
   const [recovering, setRecovering] = useState(
     protectionState === "Recovering",
   );
+  const [now, setNow] = useState(0);
+  const [finished, setFinished] = useState(false);
+  const completionRef = useRef(false);
   const recoverySteps = [
     "Recovery requested",
     "Guardian verified",
@@ -712,31 +784,51 @@ function FrozenExperience({
     "Recovery completed",
   ];
 
-  useEffect(() => {
-    if (!recovering || step >= recoverySteps.length) return;
-    const timer = window.setTimeout(() => setStep((current) => current + 1), 520);
-    return () => window.clearTimeout(timer);
-  }, [recovering, recoverySteps.length, step]);
+  const step =
+    recovering && recovery
+      ? Math.min(
+          recoverySteps.length,
+          Math.floor(((now || recovery.startedAt) - recovery.startedAt) / 520),
+        )
+      : 0;
 
   useEffect(() => {
-    if (!recovering || step !== recoverySteps.length) return;
-    completeRecovery(transaction);
-  }, [completeRecovery, recovering, step, recoverySteps.length, transaction]);
+    if (!recovering || !recovery || step >= recoverySteps.length) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 120);
+    return () => window.clearInterval(timer);
+  }, [recovering, recovery, recoverySteps.length, step]);
+
+  useEffect(() => {
+    if (
+      !recovering ||
+      !recovery ||
+      step !== recoverySteps.length ||
+      completionRef.current
+    ) {
+      return;
+    }
+    completionRef.current = true;
+    setFinished(true);
+    completeRecovery();
+  }, [completeRecovery, recovering, recovery, recoverySteps.length, step]);
 
   if (recovering) {
-    const finished = step === recoverySteps.length;
+    const recoveryFinished = finished || step === recoverySteps.length;
     return (
       <div className="modal-content recovery-content" aria-live="polite">
         <div className="modal-mascot">
-          <MooloMascot state={finished ? "safe" : "waiting"} size="large" />
+          <MooloMascot
+            state={recoveryFinished ? "safe" : "waiting"}
+            size="large"
+          />
         </div>
         <span className="eyebrow">Guided recovery</span>
         <h2 id="security-modal-title">
-          {finished ? "Recovery complete" : "Securing your wallet"}
+          {recoveryFinished ? "Recovery complete" : "Securing your wallet"}
         </h2>
         <p>
-          {finished
-            ? "A fresh demo wallet is now protected and ready."
+          {recoveryFinished
+            ? "A fresh demo wallet is protected. Simulated balances are preserved so the presentation can continue."
             : "Moolo is coordinating a simulated guardian recovery."}
         </p>
         <div className="security-step-list">
@@ -750,7 +842,7 @@ function FrozenExperience({
             </div>
           ))}
         </div>
-        {finished && (
+        {recoveryFinished && (
           <>
             <div className="new-wallet-box">
               <span>New demo wallet</span>
@@ -795,14 +887,33 @@ function FrozenExperience({
       <button
         className="primary-button full-button"
         onClick={() => {
-          beginRecovery();
+          const recoveryTransaction = createDemoTransaction({
+            type: "Wallet recovery",
+            token: "ETH",
+            amount: 0,
+            from: walletAddress,
+            to: ADDRESSES.recovered,
+            assessment: {
+              score: 10,
+              level: "Low",
+              reasons: ["Guardian verification and recovery delay completed"],
+              decision: "allow",
+            },
+            status: "Recovered",
+            policies: ["Emergency freeze", "Guardian recovery"],
+          });
+          beginRecovery(recoveryTransaction);
           setRecovering(true);
+          setNow(Date.now());
         }}
       >
         <RotateCcw size={17} aria-hidden="true" />
         Start Recovery
       </button>
-      <button className="secondary-button full-button" onClick={resetDemo}>
+      <button
+        className="secondary-button full-button"
+        onClick={() => onChange({ kind: "reset-confirm" })}
+      >
         Reset Demo
       </button>
       <SimulationNotice compact />
@@ -818,6 +929,7 @@ function ActivityExperience({
   onClose: () => void;
 }) {
   const usdValue = transaction.amount * TOKEN_PRICES[transaction.token];
+  const [copied, setCopied] = useState(false);
   return (
     <div className="modal-content activity-detail-content">
       <div className="modal-mascot">
@@ -836,6 +948,10 @@ function ActivityExperience({
       <h2 id="security-modal-title">{transaction.type}</h2>
       <StatusBadge value={transaction.status} />
       <div className="transaction-summary">
+        <DetailRow label="Type">{transaction.type}</DetailRow>
+        <DetailRow label="Status">
+          <StatusBadge value={transaction.status} />
+        </DetailRow>
         <DetailRow label="Amount">
           {transaction.amount.toLocaleString()} {transaction.token}
         </DetailRow>
@@ -843,18 +959,88 @@ function ActivityExperience({
         <DetailRow label="From">{shortAddress(transaction.from)}</DetailRow>
         <DetailRow label="To">{shortAddress(transaction.to)}</DetailRow>
         <DetailRow label="Risk score">{transaction.riskScore}/100</DetailRow>
+        <DetailRow label="Created">
+          {formatDateTime(transaction.createdAt)}
+        </DetailRow>
         <DetailRow label="Demo block">
           #{transaction.blockNumber.toLocaleString()}
         </DetailRow>
         <DetailRow label="Network fee">{transaction.fee} ETH</DetailRow>
       </div>
+      <section className="activity-policy-detail">
+        <strong>Risk reasons</strong>
+        <ul>
+          {transaction.reasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+        <strong>Applied policies</strong>
+        <ul>
+          {transaction.policies.map((policy) => (
+            <li key={policy}>{policy}</li>
+          ))}
+        </ul>
+      </section>
       <div className="hash-box">
         <span>Simulated transaction hash</span>
         <code>{transaction.hash}</code>
-        <Copy size={15} aria-hidden="true" />
+        <button
+          type="button"
+          aria-label="Copy simulated transaction hash"
+          onClick={() => {
+            void navigator.clipboard.writeText(transaction.hash);
+            setCopied(true);
+          }}
+        >
+          {copied ? <Check size={15} /> : <Copy size={15} />}
+        </button>
+      </div>
+      <div className="sr-only" aria-live="polite">
+        {copied ? "Simulated transaction hash copied." : ""}
       </div>
       <button className="primary-button full-button" onClick={onClose}>
         Close Details
+      </button>
+      <SimulationNotice compact />
+    </div>
+  );
+}
+
+function ResetExperience({ onClose }: { onClose: () => void }) {
+  const resetDemo = useWalletStore((state) => state.resetDemo);
+  const [resetting, setResetting] = useState(false);
+
+  return (
+    <div className="modal-content centered-result">
+      <div className="warning-icon">
+        <RotateCcw size={27} aria-hidden="true" />
+      </div>
+      <span className="eyebrow">Reset local simulation</span>
+      <h2 id="security-modal-title">Reset the entire demo?</h2>
+      <p>
+        Balances, settings, pending timers, recovery state, activity, and the
+        saved browser state will return to their presentation defaults.
+      </p>
+      <button
+        className="danger-button full-button"
+        type="button"
+        disabled={resetting}
+        onClick={() => {
+          if (resetting) return;
+          setResetting(true);
+          resetDemo();
+          onClose();
+        }}
+      >
+        Reset Demo
+      </button>
+      <button
+        className="secondary-button full-button"
+        type="button"
+        disabled={resetting}
+        onClick={onClose}
+      >
+        Keep Current State
       </button>
       <SimulationNotice compact />
     </div>

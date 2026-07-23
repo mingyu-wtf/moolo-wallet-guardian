@@ -47,6 +47,7 @@ export interface DemoTransaction {
   riskScore: number;
   riskLevel: RiskLevel;
   reasons: string[];
+  policies: string[];
   createdAt: number;
 }
 
@@ -63,7 +64,13 @@ export type WalletProtectionState = "Protected" | "Frozen" | "Recovering";
 
 export interface PendingTransfer {
   transaction: DemoTransaction;
+  startedAt: number;
   endsAt: number;
+}
+
+export interface RecoveryProcess {
+  transaction: DemoTransaction;
+  startedAt: number;
 }
 
 export interface RiskInput {

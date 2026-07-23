@@ -26,6 +26,7 @@ interface TransactionInput {
   to: string;
   assessment: RiskAssessment;
   status: DemoTransaction["status"];
+  policies?: string[];
 }
 
 export function createDemoTransaction(
@@ -44,6 +45,11 @@ export function createDemoTransaction(
     riskScore: input.assessment.score,
     riskLevel: input.assessment.level,
     reasons: input.assessment.reasons,
+    policies: input.policies ?? [
+      "Spending policy",
+      "Address reputation",
+      "Reactive decision",
+    ],
     createdAt: Date.now(),
   };
 }
@@ -53,6 +59,13 @@ export function formatCurrency(value: number): string {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 2,
+  }).format(value);
+}
+
+export function formatDateTime(value: number): string {
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(value);
 }
 

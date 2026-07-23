@@ -23,12 +23,14 @@ generated or stored locally in the browser.
 - Normal transfer confirmation and simulated balance updates
 - Phishing-address blocking with malicious reputation details
 - Large-transfer Time Lock with persistent end time
-- Guardian approval and rejection
+- Idempotent Guardian approval and rejection that update one activity record
 - Unknown-contract analysis and unlimited-approval blocking
 - AI agent daily-limit denial
 - Emergency wallet freeze and five-step guardian recovery
 - Activity history and simulated transaction details
 - Persistent security settings and activity via Zustand and localStorage
+- Corruption-safe persisted state migration and a confirmed full reset
+- Keyboard-contained dialogs, focus restoration, reduced motion, and live feedback
 - Desktop presentation control panel and a mobile demo sheet
 
 ## Technology
@@ -62,7 +64,11 @@ npm run build
 ```
 
 The risk-engine unit suite covers trusted transfers, large/new-address scoring,
-phishing blocking, agent overspend, score clamping, and risk-level boundaries.
+phishing blocking, unknown contracts, agent overspend, disabled optional
+protection, score clamping, and risk-level boundaries. State-transition tests
+cover single balance deduction, Time Lock completion and cancellation, Guardian
+idempotency, Freeze/Recovery, insufficient simulated funds, and persisted-state
+sanitization.
 The rendered-output tests verify the Moolo metadata, social card, starter cleanup,
 and persistent simulation-only disclosure.
 
@@ -78,6 +84,32 @@ Use the desktop **Demo Control Panel** or the mobile **Demo** menu:
 6. Wallet Compromise — freeze outgoing activity and run recovery
 7. Guardian Approval — approve or reject a pending protected transfer
 8. Reset Demo — restore all settings, balances, and activity
+
+For presentation repeatability, **Reset Demo** restores 3.42 ETH, 8,250 USDC,
+1,240 RLO, the original demo address, default protection policies, and the
+single starter receive activity. It also removes pending Time Locks, recovery
+state, settled transaction IDs, and the `moolo-wallet` localStorage record.
+
+Recovery intentionally preserves the current simulated balances while assigning
+the protected recovery address. Critical phishing addresses remain blocked even
+when optional Moolo Protection is off; the Shield screen states this baseline
+safety policy explicitly.
+
+## Presenter verification path
+
+Before a live Builders Hub session:
+
+1. Reset the demo and unlock with any non-empty demo password.
+2. Run Normal Transfer and confirm one 100 USDC deduction.
+3. Run Large Transfer and choose Time Lock or Guardian review.
+4. Run Phishing Address, Unknown Contract, and AI Agent Overspend.
+5. Run Wallet Compromise, complete all five recovery steps, and confirm Send is
+   available again.
+6. Open Activity details to show reasons, applied policies, simulated fee,
+   block, timestamp, and 64-hex-character transaction hash.
+
+Scenario controls refuse conflicting pending/frozen flows and explain when a
+reset is required to restore enough simulated funds.
 
 ## Rialo concept mapping
 

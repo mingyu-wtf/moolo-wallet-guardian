@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -8,7 +8,6 @@ import {
   ArrowUpRight,
   Bot,
   Check,
-  ChevronDown,
   ChevronRight,
   Clock3,
   Copy,
@@ -34,8 +33,10 @@ import {
 } from "@/components/security/SecurityExperience";
 import { SimulationNotice } from "@/components/security/SimulationNotice";
 import { StatusBadge } from "@/components/security/StatusBadge";
+import { SendView } from "@/components/wallet/SendView";
 import {
   ADDRESSES,
+  SCENARIO_LABELS,
   TOKENS,
   TOKEN_PRICES,
 } from "@/lib/constants";
@@ -43,15 +44,10 @@ import { calculateRisk } from "@/lib/risk-engine";
 import {
   createDemoTransaction,
   formatCurrency,
-  isEvmAddress,
   shortAddress,
 } from "@/lib/simulation";
 import { useWalletStore, type WalletView } from "@/store/wallet-store";
-import type {
-  DemoScenario,
-  DemoTransaction,
-  TokenSymbol,
-} from "@/types";
+import type { DemoScenario, DemoTransaction } from "@/types";
 
 const tabItems: Array<{
   id: Exclude<WalletView, "send">;
@@ -101,17 +97,23 @@ export function WalletShell() {
   const protectionState = useWalletStore((state) => state.protectionState);
   const walletAddress = useWalletStore((state) => state.walletAddress);
   const pendingTransfer = useWalletStore((state) => state.pendingTransfer);
+  const activeScenario = useWalletStore((state) => state.activeScenario);
+  const setActiveScenario = useWalletStore(
+    (state) => state.setActiveScenario,
+  );
   const addActivity = useWalletStore((state) => state.addActivity);
   const startTimeLock = useWalletStore((state) => state.startTimeLock);
   const setAwaitingGuardian = useWalletStore(
     (state) => state.setAwaitingGuardian,
   );
   const freezeWallet = useWalletStore((state) => state.freezeWallet);
-  const resetDemo = useWalletStore((state) => state.resetDemo);
   const [experience, setExperience] =
     useState<SecurityExperienceState | null>(null);
   const [mobileDemoOpen, setMobileDemoOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [demoMessage, setDemoMessage] = useState("");
+  const mobileSheetRef = useRef<HTMLDivElement>(null);
+  const mobileTriggerRef = useRef<HTMLButtonElement>(null);
 
   const totalBalance = useMemo(
     () =>
@@ -204,12 +206,56 @@ export function WalletShell() {
       to: scenarioInput.to,
       assessment,
       status,
+      policies:
+        scenario === "agent"
+          ? ["AI agent daily limit", "Reactive decision"]
+          : scenario === "compromise"
+            ? ["Emergency freeze", "Guardian recovery"]
+            : scenario === "contract"
+              ? ["Contract verification", "Token approval limit"]
+              : undefined,
     });
   };
 
   const handleScenario = (scenario: DemoScenario) => {
+    if (
+      protectionState !== "Protected" &&
+      scenario !== "compromise"
+    ) {
+      setDemoMessage("Recover or reset the frozen wallet before starting another scenario.");
+      return;
+    }
+    if (
+      pendingTransfer &&
+      scenario !== "guardian" &&
+      scenario !== "compromise"
+    ) {
+      setDemoMessage("Finish, cancel, or send the pending transfer to a guardian first.");
+      return;
+    }
     setMobileDemoOpen(false);
+
+    if (scenario === "compromise" && protectionState !== "Protected") {
+      setActiveScenario(scenario);
+      setDemoMessage(`${SCENARIO_LABELS[scenario].title} opened.`);
+      const frozenTransaction =
+        useWalletStore
+          .getState()
+          .activity.find((item) => item.status === "Frozen") ??
+        createScenarioTransaction(scenario);
+      setExperience({ kind: "frozen", transaction: frozenTransaction });
+      return;
+    }
+
     const transaction = createScenarioTransaction(scenario);
+    if (transaction.amount > balances[transaction.token]) {
+      setDemoMessage(
+        `${SCENARIO_LABELS[scenario].title} needs ${transaction.amount.toLocaleString()} ${transaction.token}. Reset the demo to restore the starting balance.`,
+      );
+      return;
+    }
+    setActiveScenario(scenario);
+    setDemoMessage(`${SCENARIO_LABELS[scenario].title} opened.`);
     const assessment = {
       score: transaction.riskScore,
       level: transaction.riskLevel,
@@ -252,7 +298,11 @@ export function WalletShell() {
     }
 
     if (!pendingTransfer) {
-      startTimeLock(transaction);
+      const started = startTimeLock(transaction);
+      if (!started) {
+        setDemoMessage("The guardian request could not start until the current flow is resolved.");
+        return;
+      }
       setAwaitingGuardian();
     } else if (pendingTransfer.transaction.status !== "Awaiting Guardian") {
       setAwaitingGuardian();
@@ -261,24 +311,57 @@ export function WalletShell() {
   };
 
   const handleReset = () => {
-    setExperience(null);
     setMobileDemoOpen(false);
-    resetDemo();
+    setExperience({ kind: "reset-confirm" });
   };
+
+  useEffect(() => {
+    if (!mobileDemoOpen) return;
+    const sheet = mobileSheetRef.current;
+    const trigger = mobileTriggerRef.current;
+    if (!sheet) return;
+    const focusable = sheet.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    focusable[0]?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileDemoOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      trigger?.focus();
+    };
+  }, [mobileDemoOpen]);
 
   return (
     <main className="wallet-page">
+      <TimeLockMonitor />
       <SimulationNotice />
       <div className="wallet-layout">
         <section className="wallet-frame">
           <header className="wallet-header">
-            <Brand compact />
+            <Brand compact showMascot={false} />
             <div className="network-label">
               <span />
               Moolo Demo Network
             </div>
             <div className="wallet-header-actions">
               <button
+                ref={mobileTriggerRef}
                 className="icon-button mobile-demo-trigger"
                 type="button"
                 onClick={() => setMobileDemoOpen(true)}
@@ -317,7 +400,7 @@ export function WalletShell() {
             <StatusBadge value={protectionState} />
           </section>
 
-          {protectionState === "Frozen" && (
+          {protectionState !== "Protected" && (
             <button
               className="freeze-banner"
               type="button"
@@ -327,8 +410,14 @@ export function WalletShell() {
             >
               <LockKeyhole size={18} aria-hidden="true" />
               <span>
-                <strong>Wallet frozen</strong>
-                Abnormal behavior detected. Start recovery to restore access.
+                <strong>
+                  {protectionState === "Recovering"
+                    ? "Recovery in progress"
+                    : "Wallet frozen"}
+                </strong>
+                {protectionState === "Recovering"
+                  ? "Open the recovery flow to finish protecting the new wallet."
+                  : "Abnormal behavior detected. Start recovery to restore access."}
               </span>
               <ChevronRight size={17} />
             </button>
@@ -451,7 +540,15 @@ export function WalletShell() {
           </footer>
         </section>
 
-        <DemoPanel onScenario={handleScenario} onReset={handleReset} />
+        <DemoPanel
+          onScenario={handleScenario}
+          onReset={handleReset}
+          activeScenario={activeScenario}
+          protectionState={protectionState}
+          pendingStatus={pendingTransfer?.transaction.status ?? null}
+          message={demoMessage}
+          busy={experience !== null}
+        />
       </div>
 
       <AnimatePresence>
@@ -473,7 +570,11 @@ export function WalletShell() {
             exit={{ opacity: 0 }}
           >
             <motion.div
+              ref={mobileSheetRef}
               className="mobile-demo-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Demo control panel"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -490,6 +591,10 @@ export function WalletShell() {
                 mobile
                 onScenario={handleScenario}
                 onReset={handleReset}
+                activeScenario={activeScenario}
+                protectionState={protectionState}
+                pendingStatus={pendingTransfer?.transaction.status ?? null}
+                message={demoMessage}
               />
             </motion.div>
           </motion.div>
@@ -497,10 +602,27 @@ export function WalletShell() {
       </AnimatePresence>
 
       <div className="sr-only" aria-live="polite">
-        {copied ? "Demo wallet address copied." : ""}
+        {copied ? "Demo wallet address copied." : demoMessage}
       </div>
     </main>
   );
+}
+
+function TimeLockMonitor() {
+  const pending = useWalletStore((state) => state.pendingTransfer);
+  const completeTimeLock = useWalletStore((state) => state.completeTimeLock);
+
+  useEffect(() => {
+    if (!pending || pending.transaction.status !== "Timelocked") return;
+    const delay = Math.max(0, pending.endsAt - Date.now());
+    const timer = window.setTimeout(
+      completeTimeLock,
+      Math.min(delay, 2_147_000_000),
+    );
+    return () => window.clearTimeout(timer);
+  }, [completeTimeLock, pending]);
+
+  return null;
 }
 
 function TokensView() {
@@ -535,7 +657,7 @@ function TokensView() {
         </div>
       ))}
       <div className="guardian-card">
-        <MooloMascot state="safe" size="small" />
+        <ShieldCheck size={22} aria-hidden="true" />
         <div>
           <strong>Moolo is watching quietly</strong>
           <span>
@@ -569,7 +691,7 @@ function ActivityView({
         <button
           className="activity-row"
           type="button"
-          key={`${transaction.id}-${transaction.status}-${transaction.createdAt}`}
+          key={transaction.id}
           onClick={() => onSelect(transaction)}
         >
           <span className={`activity-icon activity-${transaction.status.toLowerCase().replaceAll(" ", "-")}`}>
@@ -609,6 +731,13 @@ function ShieldView({ onFreeze }: { onFreeze: () => void }) {
   const settings = useWalletStore((state) => state.settings);
   const updateSettings = useWalletStore((state) => state.updateSettings);
   const protectionState = useWalletStore((state) => state.protectionState);
+  const [saveMessage, setSaveMessage] = useState("");
+
+  const saveSettings = (next: Parameters<typeof updateSettings>[0]) => {
+    updateSettings(next);
+    setSaveMessage("Protection settings saved in this browser.");
+    window.setTimeout(() => setSaveMessage(""), 1800);
+  };
 
   const toggles: Array<{
     key:
@@ -686,13 +815,23 @@ function ShieldView({ onFreeze }: { onFreeze: () => void }) {
         />
         <div>
           <span className="eyebrow">Protection center</span>
-          <strong>Your policies are active</strong>
+          <strong>
+            {settings.protectionEnabled
+              ? "Your policies are active"
+              : "Optional protection is off"}
+          </strong>
           <p>
             These controls only change how the local simulation responds.
           </p>
         </div>
         <StatusBadge value={protectionState} />
       </div>
+      {!settings.protectionEnabled && (
+        <div className="protection-off-note" role="status">
+          Optional spending, new-address, and agent policies are paused.
+          Critical phishing addresses remain blocked for demo safety.
+        </div>
+      )}
       <div className="setting-group">
         {toggles.map((item) => (
           <label className="toggle-row" key={item.key}>
@@ -704,8 +843,9 @@ function ShieldView({ onFreeze }: { onFreeze: () => void }) {
               type="checkbox"
               checked={settings[item.key]}
               onChange={(event) =>
-                updateSettings({ [item.key]: event.target.checked })
+                saveSettings({ [item.key]: event.target.checked })
               }
+              aria-label={`${item.label}: ${settings[item.key] ? "on" : "off"}`}
             />
             <i aria-hidden="true" />
           </label>
@@ -721,18 +861,22 @@ function ShieldView({ onFreeze }: { onFreeze: () => void }) {
                 min={item.min}
                 value={settings[item.key]}
                 onChange={(event) =>
-                  updateSettings({
+                  saveSettings({
                     [item.key]: Math.max(
                       item.min,
                       Number(event.target.value) || item.min,
                     ),
                   })
                 }
+                aria-label={item.label}
               />
               <small>{item.suffix}</small>
             </div>
           </label>
         ))}
+      </div>
+      <div className="settings-save-status" aria-live="polite">
+        {saveMessage}
       </div>
       <button
         className="danger-button full-button"
@@ -744,268 +888,5 @@ function ShieldView({ onFreeze }: { onFreeze: () => void }) {
         Simulate Emergency Freeze
       </button>
     </div>
-  );
-}
-
-function SendView({
-  onCancel,
-  onAnalyze,
-}: {
-  onCancel: () => void;
-  onAnalyze: (
-    transaction: DemoTransaction,
-    assessment: ReturnType<typeof calculateRisk>,
-  ) => void;
-}) {
-  const balances = useWalletStore((state) => state.balances);
-  const settings = useWalletStore((state) => state.settings);
-  const walletAddress = useWalletStore((state) => state.walletAddress);
-  const [token, setToken] = useState<TokenSymbol>("USDC");
-  const [recipient, setRecipient] = useState<string>(ADDRESSES.trusted);
-  const [amount, setAmount] = useState("100");
-  const [reviewing, setReviewing] = useState(false);
-  const [error, setError] = useState("");
-
-  const numericAmount = Number(amount);
-  const addressType =
-    recipient.toLowerCase() === ADDRESSES.phishing.toLowerCase()
-      ? ("phishing" as const)
-      : recipient.toLowerCase() === ADDRESSES.trusted.toLowerCase()
-        ? ("trusted" as const)
-        : ("new" as const);
-  const assessment = calculateRisk({
-    amount: numericAmount || 0,
-    token,
-    addressType,
-    settings,
-  });
-
-  const validate = () => {
-    if (!isEvmAddress(recipient)) {
-      setError("Enter a valid 42-character EVM address.");
-      return false;
-    }
-    if (recipient.toLowerCase() === walletAddress.toLowerCase()) {
-      setError("Choose a different recipient from this demo wallet.");
-      return false;
-    }
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      setError("Enter an amount greater than zero.");
-      return false;
-    }
-    if (numericAmount > balances[token]) {
-      setError(`You only have ${balances[token].toLocaleString()} ${token}.`);
-      return false;
-    }
-    setError("");
-    return true;
-  };
-
-  const handleReview = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (validate()) setReviewing(true);
-  };
-
-  const handleConfirm = () => {
-    const transaction = createDemoTransaction({
-      token,
-      amount: numericAmount,
-      from: walletAddress,
-      to: recipient,
-      assessment,
-      status:
-        assessment.decision === "block"
-          ? "Blocked"
-          : assessment.decision === "timelock"
-            ? "Timelocked"
-            : "Confirmed",
-    });
-    onAnalyze(transaction, assessment);
-  };
-
-  if (reviewing) {
-    return (
-      <section className="send-view review-view">
-        <button className="back-button" type="button" onClick={() => setReviewing(false)}>
-          <ChevronDown size={17} aria-hidden="true" />
-          Edit transfer
-        </button>
-        <span className="eyebrow">Step 2 of 2</span>
-        <h2>Transaction review</h2>
-        <p className="section-copy">
-          Confirm the simulated request before Moolo runs its security checks.
-        </p>
-        <div className="review-amount">
-          <span>Sending</span>
-          <strong>
-            {numericAmount.toLocaleString()} {token}
-          </strong>
-          <small>
-            {formatCurrency(numericAmount * TOKEN_PRICES[token])}
-          </small>
-        </div>
-        <div className="transaction-summary">
-          <div className="detail-row">
-            <span>From</span>
-            <strong>{shortAddress(walletAddress)}</strong>
-          </div>
-          <div className="detail-row">
-            <span>To</span>
-            <strong>{shortAddress(recipient)}</strong>
-          </div>
-          <div className="detail-row">
-            <span>Network fee</span>
-            <strong>~0.0004 ETH</strong>
-          </div>
-          <div className="detail-row">
-            <span>New address</span>
-            <strong>{addressType === "new" ? "Yes" : "No"}</strong>
-          </div>
-          <div className="detail-row">
-            <span>Estimated risk</span>
-            <strong>
-              <StatusBadge value={assessment.level} />
-            </strong>
-          </div>
-        </div>
-        <div className="applied-policies">
-          <strong>Applied Moolo policies</strong>
-          <span>
-            <ShieldCheck size={14} /> Spending limit
-          </span>
-          <span>
-            <ShieldCheck size={14} /> Address reputation
-          </span>
-          <span>
-            <ShieldCheck size={14} /> Reactive decision
-          </span>
-        </div>
-        <button className="primary-button full-button" type="button" onClick={handleConfirm}>
-          Confirm & Run Security Check
-          <ChevronRight size={17} aria-hidden="true" />
-        </button>
-        <button className="text-button" type="button" onClick={onCancel}>
-          Cancel Transfer
-        </button>
-        <SimulationNotice compact />
-      </section>
-    );
-  }
-
-  return (
-    <section className="send-view">
-      <button className="back-button" type="button" onClick={onCancel}>
-        <ChevronDown size={17} aria-hidden="true" />
-        Wallet
-      </button>
-      <span className="eyebrow">Step 1 of 2</span>
-      <h2>Send demo assets</h2>
-      <p className="section-copy">
-        Build a request, then watch Moolo analyze it before anything changes.
-      </p>
-      <form onSubmit={handleReview} noValidate>
-        <fieldset className="asset-selector">
-          <legend>Choose asset</legend>
-          <div>
-            {TOKENS.map((item) => (
-              <button
-                className={token === item.symbol ? "selected" : ""}
-                type="button"
-                key={item.symbol}
-                onClick={() => {
-                  setToken(item.symbol);
-                  setAmount("");
-                }}
-              >
-                <span
-                  className="token-icon"
-                  style={
-                    { "--token-color": item.accent } as React.CSSProperties
-                  }
-                >
-                  {item.symbol.slice(0, 1)}
-                </span>
-                <strong>{item.symbol}</strong>
-                <small>
-                  {balances[item.symbol].toLocaleString(undefined, {
-                    maximumFractionDigits: 4,
-                  })}
-                </small>
-              </button>
-            ))}
-          </div>
-        </fieldset>
-        <label className="form-label" htmlFor="recipient">
-          Recipient address
-        </label>
-        <div className="address-input">
-          <input
-            id="recipient"
-            value={recipient}
-            onChange={(event) => setRecipient(event.target.value.trim())}
-            spellCheck="false"
-            autoComplete="off"
-            aria-describedby={error ? "send-error" : undefined}
-          />
-          <StatusBadge value={addressType === "phishing" ? "Critical" : addressType === "trusted" ? "Low" : "Medium"} />
-        </div>
-        <div className="quick-addresses" aria-label="Quick recipient choices">
-          <button type="button" onClick={() => setRecipient(ADDRESSES.trusted)}>
-            Trusted Address
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              setRecipient(ADDRESSES.new)
-            }
-          >
-            New Address
-          </button>
-          <button type="button" onClick={() => setRecipient(ADDRESSES.phishing)}>
-            Phishing Address
-          </button>
-        </div>
-        <label className="form-label" htmlFor="send-amount">
-          Amount
-        </label>
-        <div className="amount-input">
-          <input
-            id="send-amount"
-            type="number"
-            min="0"
-            step="any"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            placeholder="0"
-            aria-describedby={error ? "send-error" : "amount-value"}
-          />
-          <button
-            type="button"
-            onClick={() => setAmount(String(balances[token]))}
-          >
-            Max
-          </button>
-          <strong>{token}</strong>
-        </div>
-        <div className="amount-meta" id="amount-value">
-          <span>
-            {formatCurrency((numericAmount || 0) * TOKEN_PRICES[token])}
-          </span>
-          <span>
-            Balance: {balances[token].toLocaleString()} {token}
-          </span>
-        </div>
-        {error && (
-          <p className="field-error" id="send-error" role="alert">
-            {error}
-          </p>
-        )}
-        <button className="primary-button full-button" type="submit">
-          Review Transaction
-          <ChevronRight size={17} aria-hidden="true" />
-        </button>
-      </form>
-      <SimulationNotice compact />
-    </section>
   );
 }

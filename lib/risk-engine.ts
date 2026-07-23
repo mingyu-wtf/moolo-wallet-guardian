@@ -16,7 +16,19 @@ export function calculateRisk(input: RiskInput): RiskAssessment {
   let score = 5;
   const reasons: string[] = ["Baseline transaction screening"];
 
-  if (addressType === "new") {
+  if (!settings.protectionEnabled && addressType !== "phishing") {
+    return {
+      score,
+      level: "Low",
+      reasons: [
+        "Moolo Protection is off",
+        "Only critical phishing blocking remains active",
+      ],
+      decision: "allow",
+    };
+  }
+
+  if (addressType === "new" && settings.protectNewAddresses) {
     score += 20;
     reasons.push("Recipient has no prior wallet history");
   }
@@ -58,7 +70,10 @@ export function calculateRisk(input: RiskInput): RiskAssessment {
   const finalScore = clampScore(score);
   const level = getRiskLevel(finalScore);
   const decision =
-    level === "Critical"
+    addressType === "contract" ||
+    (isAgent && usdValue > settings.aiAgentDailyLimit)
+      ? "block"
+      : level === "Critical"
       ? "block"
       : level === "High"
         ? "timelock"
