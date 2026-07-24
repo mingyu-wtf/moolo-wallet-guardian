@@ -9,6 +9,8 @@ import {
   ShieldCheck,
   TriangleAlert,
   UserRoundCheck,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { RialoMark } from "@/components/rialo/RialoMark";
 import { SCENARIO_LABELS } from "@/lib/constants";
@@ -40,6 +42,8 @@ interface DemoPanelProps {
   message?: string;
   busy?: boolean;
   mobile?: boolean;
+  soundEnabled: boolean;
+  onSoundToggle: () => void;
 }
 
 export function DemoPanel({
@@ -51,6 +55,8 @@ export function DemoPanel({
   message,
   busy = false,
   mobile = false,
+  soundEnabled,
+  onSoundToggle,
 }: DemoPanelProps) {
   const isFrozen = protectionState !== "Protected";
   const scenarioDisabled = (scenario: DemoScenario) =>
@@ -71,8 +77,22 @@ export function DemoPanel({
         <div className="demo-panel-signals">
           <span className="live-dot">Live</span>
           <span className="demo-rialo-mark" title="Designed for Rialo">
-            <RialoMark size="mini" />
+            <RialoMark size="small" />
           </span>
+          <button
+            className="sound-toggle"
+            type="button"
+            onClick={onSoundToggle}
+            aria-label={`Turn demo sound ${soundEnabled ? "off" : "on"}`}
+            aria-pressed={soundEnabled}
+            title={`Demo sound ${soundEnabled ? "on" : "off"}`}
+          >
+            {soundEnabled ? (
+              <Volume2 size={15} aria-hidden="true" />
+            ) : (
+              <VolumeX size={15} aria-hidden="true" />
+            )}
+          </button>
         </div>
       </div>
       <p className="demo-panel-copy">
@@ -101,6 +121,23 @@ export function DemoPanel({
         <p className="demo-panel-message" role="status">
           {message}
         </p>
+      )}
+      {activeScenario && (
+        <div
+          className="presenter-flow"
+          role="status"
+          aria-label={`${SCENARIO_LABELS[activeScenario].title}: simulated Rialo workflow active`}
+        >
+          <span className="presenter-flow-title">
+            <RialoMark size="small" />
+            Simulated Rialo Workflow
+          </span>
+          <ol>
+            <li>Inspect</li>
+            <li>Evaluate policy</li>
+            <li>Resolve safely</li>
+          </ol>
+        </div>
       )}
       <div className="scenario-list">
         {scenarios.map(({ id, icon: Icon }) => (

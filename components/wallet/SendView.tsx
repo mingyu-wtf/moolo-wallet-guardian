@@ -125,9 +125,9 @@ export function SendView({ onCancel, onAnalyze }: SendViewProps) {
             <strong>{shortAddress(recipient)}</strong>
           </div>
           <div className="detail-row">
-            <span>Network</span>
-            <strong>Rialo Concept Network</strong>
-            <small>Simulation</small>
+            <span>Environment</span>
+            <strong>Rialo Concept Demo</strong>
+            <small>Architecture simulation</small>
           </div>
           <div className="detail-row">
             <span>Network fee</span>

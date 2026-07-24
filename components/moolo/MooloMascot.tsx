@@ -26,12 +26,19 @@ export function MooloMascot({
       role="img"
       aria-label={`Moolo guardian mascot: ${state}`}
     >
+      <span className="moolo-horn moolo-horn-left" aria-hidden="true" />
+      <span className="moolo-horn moolo-horn-right" aria-hidden="true" />
       <div className="moolo-ear moolo-ear-left" />
       <div className="moolo-ear moolo-ear-right" />
       <div className="moolo-face">
-        <span className="moolo-eye" />
-        <span className="moolo-eye" />
-        <span className="moolo-mouth" />
+        <span className="moolo-cow-spot" aria-hidden="true" />
+        <span className="moolo-eye moolo-eye-left" />
+        <span className="moolo-eye moolo-eye-right" />
+        <span className="moolo-muzzle">
+          <span className="moolo-nostril" />
+          <span className="moolo-nostril" />
+          <span className="moolo-mouth" />
+        </span>
       </div>
       <span className="moolo-state-mark" aria-hidden="true">
         <StateIcon size={size === "small" ? 11 : 14} strokeWidth={3} />

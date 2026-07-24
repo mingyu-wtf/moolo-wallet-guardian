@@ -78,7 +78,7 @@ export function RialoWorkflowPanel({
       <summary>
         <span>
           <RialoMark size="small" />
-          Simulated Rialo Execution
+          Simulated Rialo Workflow
         </span>
         <strong>{decisionLabels[workflow.finalDecision]}</strong>
       </summary>

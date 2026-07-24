@@ -222,6 +222,7 @@ button:disabled {
   width: var(--mascot-size);
   height: calc(var(--mascot-size) * 0.88);
   flex: 0 0 auto;
+  animation: mascot-breathe 3.8s ease-in-out infinite;
 }
 
 .mascot-small {
@@ -241,52 +242,116 @@ button:disabled {
   inset: 12% 4% 1%;
   border: 3px solid var(--ink);
   border-radius: 48% 48% 42% 42%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 22%;
   background: var(--lime);
   box-shadow:
     inset 0 -10px 0 rgba(94, 138, 25, 0.08),
     0 7px 0 rgba(20, 35, 31, 0.08);
+  overflow: hidden;
+  z-index: 2;
 }
 
 .moolo-ear {
   position: absolute;
-  top: 1%;
-  width: 28%;
-  height: 31%;
+  top: 13%;
+  width: 31%;
+  height: 24%;
   border: 3px solid var(--ink);
-  border-bottom: 0;
   background: var(--lime);
+  z-index: 1;
 }
 
 .moolo-ear-left {
-  left: 11%;
-  border-radius: 80% 20% 0 0;
-  transform: rotate(-14deg);
+  left: -4%;
+  border-radius: 80% 32% 58% 42%;
+  transform: rotate(-20deg);
 }
 
 .moolo-ear-right {
-  right: 11%;
-  border-radius: 20% 80% 0 0;
-  transform: rotate(14deg);
+  right: -4%;
+  border-radius: 32% 80% 42% 58%;
+  transform: rotate(20deg);
+}
+
+.moolo-horn {
+  position: absolute;
+  top: 0;
+  width: 16%;
+  height: 25%;
+  border: 3px solid var(--ink);
+  border-bottom: 0;
+  border-radius: 70% 70% 18% 18%;
+  background: #f3ddb0;
+  z-index: 1;
+}
+
+.moolo-horn-left {
+  left: 23%;
+  transform: rotate(-13deg);
+}
+
+.moolo-horn-right {
+  right: 23%;
+  transform: rotate(13deg);
+}
+
+.moolo-cow-spot {
+  position: absolute;
+  top: -7%;
+  left: 8%;
+  width: 42%;
+  height: 42%;
+  border-radius: 40% 55% 48% 62%;
+  background: rgba(20, 35, 61, 0.13);
+  transform: rotate(-14deg);
 }
 
 .moolo-eye {
+  position: absolute;
+  top: 36%;
   width: 10%;
   aspect-ratio: 0.7;
   border-radius: 999px;
   background: var(--ink);
-  transform: translateY(-10%);
+  z-index: 2;
+}
+
+.moolo-eye-left {
+  left: 27%;
+}
+
+.moolo-eye-right {
+  right: 27%;
+}
+
+.moolo-muzzle {
+  position: absolute;
+  right: 23%;
+  bottom: 7%;
+  left: 23%;
+  height: 31%;
+  border: 2px solid rgba(20, 35, 61, 0.72);
+  border-radius: 50% 50% 46% 46%;
+  display: flex;
+  justify-content: center;
+  gap: 25%;
+  background: #f2c8bf;
+  z-index: 2;
+}
+
+.moolo-nostril {
+  width: 8%;
+  height: 12%;
+  margin-top: 19%;
+  border-radius: 50%;
+  background: rgba(20, 35, 61, 0.68);
 }
 
 .moolo-mouth {
   position: absolute;
   left: 50%;
-  bottom: 24%;
-  width: 18%;
-  height: 8%;
+  bottom: 16%;
+  width: 31%;
+  height: 11%;
   border-bottom: 2px solid var(--ink);
   border-radius: 50%;
   transform: translateX(-50%);
@@ -339,16 +404,28 @@ button:disabled {
 }
 
 .mascot-small .moolo-face,
-.mascot-small .moolo-ear {
+.mascot-small .moolo-ear,
+.mascot-small .moolo-horn {
   border-width: 1.5px;
 }
 
-.mascot-small .moolo-mouth {
+.mascot-small .moolo-mouth,
+.mascot-small .moolo-muzzle {
   border-width: 1px;
 }
 
 .mascot-small .moolo-state-mark {
   border-width: 1px;
+}
+
+@keyframes mascot-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
 }
 
 .brand-lockup {
@@ -2643,8 +2720,307 @@ button:disabled {
   }
 }
 
+/* Premium Builders Hub presentation layer */
+.wallet-header {
+  background: linear-gradient(180deg, #fff, #fbfcff);
+}
+
+.account-strip {
+  background: #f3f7fc;
+}
+
+.token-icon-rialo {
+  overflow: visible;
+  background: transparent;
+}
+
+.sound-toggle {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #d6e0ec;
+  border-radius: 10px;
+  display: inline-grid;
+  place-items: center;
+  background: #fff;
+  color: #426487;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.sound-toggle:hover {
+  border-color: #97afca;
+  background: #f1f6fc;
+  transform: translateY(-1px);
+}
+
+.sound-toggle:focus-visible {
+  outline: 3px solid rgba(62, 104, 157, 0.24);
+  outline-offset: 2px;
+}
+
+.presenter-flow {
+  margin: 0 0 14px;
+  padding: 11px;
+  border: 1px solid #cddedb;
+  border-radius: 13px;
+  background:
+    linear-gradient(135deg, rgba(169, 221, 211, 0.19), transparent 62%),
+    #fff;
+}
+
+.presenter-flow-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #285e55;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.presenter-flow ol {
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  list-style: none;
+}
+
+.presenter-flow li {
+  position: relative;
+  padding-top: 12px;
+  color: #65758a;
+  font-size: 8px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.presenter-flow li::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #75a59b;
+  box-shadow: 0 0 0 0 rgba(117, 165, 155, 0.3);
+  content: "";
+  transform: translateX(-50%);
+  animation: presenter-step 1.8s ease-in-out infinite;
+}
+
+.presenter-flow li:nth-child(2)::before {
+  animation-delay: 0.28s;
+}
+
+.presenter-flow li:nth-child(3)::before {
+  animation-delay: 0.56s;
+}
+
+.security-step.step-active {
+  position: relative;
+  overflow: hidden;
+}
+
+.security-step.step-active::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 15%,
+    rgba(255, 255, 255, 0.7) 48%,
+    transparent 80%
+  );
+  content: "";
+  pointer-events: none;
+  transform: translateX(-110%);
+  animation: security-scan 1.35s ease-in-out infinite;
+}
+
+.scenario-button:hover:not(:disabled) .scenario-icon,
+.scenario-button.active .scenario-icon {
+  transform: scale(1.06);
+}
+
+.scenario-icon {
+  transition: transform 160ms ease;
+}
+
+.demo-panel-copy,
+.guardian-card span,
+.why-rialo-heading p {
+  font-size: 10.5px;
+}
+
+.scenario-button strong,
+.rialo-primitive-card strong {
+  font-size: 11px;
+}
+
+.scenario-button small,
+.demo-state-grid dt,
+.demo-state-grid dd,
+.rialo-primitive-card p,
+.rialo-workflow-heading p,
+.rialo-trace p {
+  font-size: 9.5px;
+}
+
+.rialo-primitive-card small,
+.rialo-trace small,
+.wallet-footer {
+  font-size: 8.5px;
+}
+
+@keyframes presenter-step {
+  0%,
+  32%,
+  100% {
+    background: #9ab8b2;
+    box-shadow: 0 0 0 0 rgba(117, 165, 155, 0.28);
+  }
+  52% {
+    background: #235c52;
+    box-shadow: 0 0 0 5px rgba(117, 165, 155, 0.18);
+  }
+}
+
+@keyframes security-scan {
+  65%,
+  100% {
+    transform: translateX(110%);
+  }
+}
+
+@media (min-width: 1081px) {
+  .wallet-page {
+    padding: 26px 32px 44px;
+    background:
+      radial-gradient(circle at 50% -12%, rgba(179, 203, 232, 0.24), transparent 34rem),
+      var(--canvas);
+  }
+
+  .wallet-page > .simulation-notice {
+    max-width: 1080px;
+    margin-bottom: 18px;
+  }
+
+  .wallet-layout {
+    width: min(100%, 1080px);
+    grid-template-columns: minmax(0, 650px) minmax(0, 390px);
+    gap: 26px;
+  }
+
+  .wallet-frame {
+    min-height: 820px;
+  }
+
+  .wallet-header {
+    height: 72px;
+    padding: 0 22px;
+  }
+
+  .account-strip {
+    padding: 16px 22px;
+  }
+
+  .balance-section {
+    padding: 30px 24px 20px;
+  }
+
+  .wallet-actions {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+
+  .wallet-content {
+    min-height: 310px;
+  }
+
+  .demo-panel {
+    position: sticky;
+    top: 26px;
+    padding: 22px;
+    border-color: #d5e0ec;
+    background:
+      linear-gradient(180deg, rgba(242, 247, 253, 0.96), rgba(251, 252, 254, 0.98)),
+      #fbfcfe;
+    box-shadow: 0 18px 42px rgba(23, 38, 61, 0.09);
+  }
+
+  .demo-panel h2 {
+    font-size: 21px;
+  }
+
+  .demo-panel-copy {
+    margin: 12px 0 17px;
+    font-size: 11.5px;
+  }
+
+  .demo-state-grid {
+    padding: 12px;
+  }
+
+  .scenario-list {
+    gap: 8px;
+  }
+
+  .scenario-button {
+    min-height: 60px;
+    padding: 10px 11px;
+  }
+
+  .scenario-button small {
+    font-size: 9.5px;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1080px) {
+  .wallet-layout {
+    width: 100%;
+    display: block;
+  }
+
+  .wallet-frame {
+    width: min(100%, 640px);
+    margin: 0 auto;
+  }
+
+  .wallet-layout > .demo-panel {
+    display: none;
+  }
+
+  .mobile-demo-trigger {
+    display: inline-grid;
+  }
+}
+
+@media (max-width: 520px) {
+  .rialo-mark-with-label .rialo-mark-label {
+    display: none;
+  }
+
+  .presenter-flow li {
+    font-size: 7.5px;
+  }
+}
+
 /* Rialo architecture concept layer */
 .rialo-mark {
+  --rialo-mark-size: 54px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rialo-mark-image {
+  width: var(--rialo-mark-size);
+  height: var(--rialo-mark-size);
   flex: 0 0 auto;
   display: inline-grid;
   place-items: center;
@@ -2652,31 +3028,30 @@ button:disabled {
   background: var(--rialo-cream);
 }
 
-.rialo-mark img {
+.rialo-mark-image img {
   width: 100%;
   height: 100%;
   display: block;
   object-fit: contain;
 }
 
-.rialo-mark-mini {
-  width: 22px;
-  height: 22px;
-}
-
 .rialo-mark-small {
-  width: 30px;
-  height: 30px;
+  --rialo-mark-size: 30px;
 }
 
 .rialo-mark-medium {
-  width: 54px;
-  height: 54px;
+  --rialo-mark-size: 54px;
 }
 
 .rialo-mark-large {
-  width: 82px;
-  height: 82px;
+  --rialo-mark-size: 82px;
+}
+
+.rialo-mark-label {
+  color: #171717;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: -0.025em;
 }
 
 .welcome-rialo {
@@ -2692,7 +3067,7 @@ button:disabled {
   background: rgba(255, 255, 255, 0.72);
 }
 
-.welcome-rialo > span {
+.welcome-rialo > span:last-child {
   display: grid;
   gap: 3px;
 }
@@ -2727,10 +3102,15 @@ button:disabled {
 }
 
 .network-label.rialo-network-button > .rialo-mark {
-  width: 30px;
-  height: 30px;
+  width: auto;
+  height: auto;
   border-radius: 0;
-  background: var(--rialo-cream);
+  background: transparent;
+  box-shadow: none;
+}
+
+.network-label.rialo-network-button > .rialo-mark .rialo-mark-image {
+  border-radius: 0;
   box-shadow: none;
 }
 
@@ -3070,8 +3450,7 @@ button:disabled {
   }
 
   .rialo-mark-large {
-    width: 68px;
-    height: 68px;
+    --rialo-mark-size: 68px;
   }
 
   .rialo-architecture-brand {
@@ -3409,5 +3788,75 @@ body,
   .modal-content {
     padding-right: 18px;
     padding-left: 18px;
+  }
+}
+
+/* Final presentation sizing wins over the compact legacy wallet rules above. */
+.demo-panel {
+  border-color: #d5e0ec;
+  background:
+    linear-gradient(180deg, rgba(242, 247, 253, 0.96), rgba(251, 252, 254, 0.98)),
+    #fbfcfe;
+  box-shadow: 0 18px 42px rgba(23, 38, 61, 0.09);
+}
+
+.demo-state-grid dt,
+.demo-state-grid dd {
+  font-size: 9.5px;
+}
+
+@media (min-width: 1081px) {
+  .wallet-layout {
+    width: min(100%, 1080px);
+    grid-template-columns: minmax(0, 650px) minmax(0, 390px);
+    gap: 26px;
+  }
+
+  .wallet-frame {
+    min-height: 820px;
+  }
+
+  .demo-panel {
+    position: sticky;
+    top: 26px;
+    padding: 22px;
+  }
+
+  .demo-panel h2 {
+    font-size: 21px;
+  }
+
+  .demo-panel-copy {
+    margin: 12px 0 17px;
+    font-size: 11.5px;
+  }
+
+  .scenario-list {
+    gap: 8px;
+  }
+
+  .scenario-button {
+    min-height: 60px;
+    padding: 10px 11px;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1080px) {
+  .wallet-layout {
+    width: 100%;
+    display: block;
+  }
+
+  .wallet-frame {
+    width: min(100%, 640px);
+    margin: 0 auto;
+  }
+
+  .wallet-layout > .demo-panel {
+    display: none;
+  }
+
+  .mobile-demo-trigger {
+    display: inline-grid;
   }
 }

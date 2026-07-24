@@ -59,7 +59,7 @@ export function MooloApp() {
           <nav className="welcome-nav">
             <Brand showMascot={false} />
             <span className="builders-pill">
-              <RialoMark size="mini" />
+              <RialoMark size="small" />
               Rialo Builders Hub
             </span>
           </nav>
@@ -91,7 +91,7 @@ export function MooloApp() {
                 <span>Privacy-first</span>
               </div>
               <div className="welcome-rialo">
-                <RialoMark size="medium" />
+                <RialoMark size="medium" showLabel />
                 <span>
                   <strong>Designed for Rialo</strong>
                   <small>Rialo Architecture Simulation</small>

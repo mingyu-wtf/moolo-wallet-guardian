@@ -50,6 +50,52 @@ import {
 import { useWalletStore, type WalletView } from "@/store/wallet-store";
 import type { DemoScenario, DemoTransaction } from "@/types";
 
+type DemoCue = "launch" | "warning" | "reset";
+
+function playDemoCue(cue: DemoCue) {
+  if (typeof window === "undefined" || !window.AudioContext) return;
+
+  const context = new window.AudioContext();
+  const notes =
+    cue === "warning"
+      ? [
+          { frequency: 270, offset: 0, duration: 0.12 },
+          { frequency: 210, offset: 0.13, duration: 0.16 },
+        ]
+      : cue === "reset"
+        ? [
+            { frequency: 330, offset: 0, duration: 0.1 },
+            { frequency: 440, offset: 0.11, duration: 0.13 },
+          ]
+        : [
+            { frequency: 390, offset: 0, duration: 0.09 },
+            { frequency: 520, offset: 0.1, duration: 0.12 },
+          ];
+
+  notes.forEach((note, index) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const start = context.currentTime + note.offset;
+    const end = start + note.duration;
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(note.frequency, start);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.035, start + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, end);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(start);
+    oscillator.stop(end);
+
+    if (index === notes.length - 1) {
+      oscillator.addEventListener("ended", () => {
+        void context.close();
+      });
+    }
+  });
+}
+
 const tabItems: Array<{
   id: Exclude<WalletView, "send">;
   label: string;
@@ -113,6 +159,7 @@ export function WalletShell() {
   const [mobileDemoOpen, setMobileDemoOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [demoMessage, setDemoMessage] = useState("");
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const mobileSheetRef = useRef<HTMLDivElement>(null);
   const mobileTriggerRef = useRef<HTMLButtonElement>(null);
 
@@ -220,6 +267,15 @@ export function WalletShell() {
   };
 
   const handleScenario = (scenario: DemoScenario) => {
+    if (soundEnabled) {
+      playDemoCue(
+        scenario === "phishing" ||
+          scenario === "contract" ||
+          scenario === "compromise"
+          ? "warning"
+          : "launch",
+      );
+    }
     if (
       protectionState !== "Protected" &&
       scenario !== "compromise"
@@ -313,8 +369,17 @@ export function WalletShell() {
   };
 
   const handleReset = () => {
+    if (soundEnabled) playDemoCue("reset");
     setMobileDemoOpen(false);
     setExperience({ kind: "reset-confirm" });
+  };
+
+  const handleSoundToggle = () => {
+    setSoundEnabled((enabled) => {
+      const next = !enabled;
+      if (next) playDemoCue("launch");
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -365,8 +430,8 @@ export function WalletShell() {
             >
               <RialoMark size="small" />
               <span className="rialo-network-copy">
-                <strong>Rialo Concept Network</strong>
-                <small>Simulation</small>
+                <strong>Rialo Concept Demo</strong>
+                <small>Architecture Simulation</small>
               </span>
             </button>
             <div className="wallet-header-actions">
@@ -551,7 +616,7 @@ export function WalletShell() {
 
           <footer className="wallet-footer">
             <span className="wallet-footer-rialo">
-              <RialoMark size="mini" />
+              <RialoMark size="small" />
               Designed for Rialo
             </span>
             <span>Architecture simulation only</span>
@@ -566,6 +631,8 @@ export function WalletShell() {
           pendingStatus={pendingTransfer?.transaction.status ?? null}
           message={demoMessage}
           busy={experience !== null}
+          soundEnabled={soundEnabled}
+          onSoundToggle={handleSoundToggle}
         />
       </div>
 
@@ -613,6 +680,8 @@ export function WalletShell() {
                 protectionState={protectionState}
                 pendingStatus={pendingTransfer?.transaction.status ?? null}
                 message={demoMessage}
+                soundEnabled={soundEnabled}
+                onSoundToggle={handleSoundToggle}
               />
             </motion.div>
           </motion.div>
@@ -650,10 +719,14 @@ function TokensView() {
       {TOKENS.map((token) => (
         <div className="token-row" key={token.symbol}>
           <span
-            className="token-icon"
+            className={`token-icon ${token.symbol === "RLO" ? "token-icon-rialo" : ""}`}
             style={{ "--token-color": token.accent } as React.CSSProperties}
           >
-            {token.symbol.slice(0, 1)}
+            {token.symbol === "RLO" ? (
+              <RialoMark size="small" />
+            ) : (
+              token.symbol.slice(0, 1)
+            )}
           </span>
           <div className="token-name">
             <strong>{token.name}</strong>

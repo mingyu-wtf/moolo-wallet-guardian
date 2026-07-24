@@ -77,14 +77,17 @@ test("keeps the simulation-only promise visible in product UI", async () => {
   assert.match(notice, /No Onchain Transactions/);
   assert.match(wallet, /DemoPanel/);
   assert.match(demo, /Demo Control Panel/);
+  assert.match(demo, /Turn demo sound/);
+  assert.match(demo, /Simulated Rialo Workflow/);
   assert.match(security, /SimulationNotice/);
   assert.match(app, /Designed for Rialo/);
-  assert.match(wallet, /Rialo Concept Network/);
+  assert.match(wallet, /Rialo Concept Demo/);
   assert.match(architecture, /Rialo Architecture Simulation/);
-  assert.match(architecture, /Simulated Rialo Execution/);
+  assert.match(architecture, /Simulated Rialo Workflow/);
   assert.match(rialoModel, /Simulated external signal/);
   assert.match(rialoModel, /REX concept simulation/);
   assert.match(mark, /\/brand\/rialo-mark\.png/);
+  assert.match(mark, /showLabel/);
   const productSource = `${app}${wallet}${security}${architecture}${mark}${rialoModel}`;
   assert.ok(
     (productSource.match(/<RialoMark\b/g) ?? []).length >= 8,
