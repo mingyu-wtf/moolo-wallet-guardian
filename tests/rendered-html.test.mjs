@@ -85,8 +85,12 @@ test("keeps the simulation-only promise visible in product UI", async () => {
   assert.match(rialoModel, /Simulated external signal/);
   assert.match(rialoModel, /REX concept simulation/);
   assert.match(mark, /\/brand\/rialo-mark\.png/);
-
   const productSource = `${app}${wallet}${security}${architecture}${mark}${rialoModel}`;
+  assert.ok(
+    (productSource.match(/<RialoMark\b/g) ?? []).length >= 8,
+    "Rialo mark should appear at multiple meaningful product touchpoints",
+  );
+
   assert.doesNotMatch(productSource, /MetaMask|WalletConnect/);
   assert.doesNotMatch(
     productSource,

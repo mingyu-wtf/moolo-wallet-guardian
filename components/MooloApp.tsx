@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, KeyRound, ShieldCheck } from "lucide-react";
+import { ArrowRight, KeyRound } from "lucide-react";
 import { Brand } from "@/components/moolo/Brand";
 import { MooloMascot } from "@/components/moolo/MooloMascot";
 import { RialoMark } from "@/components/rialo/RialoMark";
@@ -59,7 +59,7 @@ export function MooloApp() {
           <nav className="welcome-nav">
             <Brand showMascot={false} />
             <span className="builders-pill">
-              <ShieldCheck size={14} aria-hidden="true" />
+              <RialoMark size="mini" />
               Rialo Builders Hub
             </span>
           </nav>
@@ -127,6 +127,13 @@ export function MooloApp() {
         >
           <section className="unlock-card">
             <Brand showMascot={false} />
+            <div className="unlock-rialo">
+              <RialoMark size="small" />
+              <span>
+                <strong>Rialo Concept Demo</strong>
+                <small>Architecture simulation</small>
+              </span>
+            </div>
             <div className="unlock-mascot">
               <MooloMascot state="waiting" size="large" />
             </div>

@@ -3,7 +3,6 @@ import {
   Clock3,
   EyeOff,
   RadioTower,
-  ShieldCheck,
 } from "lucide-react";
 import { RialoMark } from "@/components/rialo/RialoMark";
 import { RIALO_PRIMITIVE_META } from "@/lib/rialo";
@@ -78,7 +77,7 @@ export function RialoWorkflowPanel({
     <details className="rialo-workflow-panel" open={open}>
       <summary>
         <span>
-          <ShieldCheck size={16} aria-hidden="true" />
+          <RialoMark size="small" />
           Simulated Rialo Execution
         </span>
         <strong>{decisionLabels[workflow.finalDecision]}</strong>

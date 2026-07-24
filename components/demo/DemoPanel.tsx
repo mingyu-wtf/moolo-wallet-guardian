@@ -10,6 +10,7 @@ import {
   TriangleAlert,
   UserRoundCheck,
 } from "lucide-react";
+import { RialoMark } from "@/components/rialo/RialoMark";
 import { SCENARIO_LABELS } from "@/lib/constants";
 import type {
   DemoScenario,
@@ -67,7 +68,12 @@ export function DemoPanel({
           <span className="eyebrow">Presenter tools</span>
           <h2>Demo Control Panel</h2>
         </div>
-        <span className="live-dot">Live</span>
+        <div className="demo-panel-signals">
+          <span className="live-dot">Live</span>
+          <span className="demo-rialo-mark" title="Designed for Rialo">
+            <RialoMark size="mini" />
+          </span>
+        </div>
       </div>
       <p className="demo-panel-copy">
         Launch a security story instantly. Every result stays safely inside this

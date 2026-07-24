@@ -20,7 +20,6 @@ import {
   Settings2,
   Shield,
   ShieldCheck,
-  Sparkles,
   WalletCards,
   X,
 } from "lucide-react";
@@ -551,7 +550,10 @@ export function WalletShell() {
           )}
 
           <footer className="wallet-footer">
-            <span>Designed for Rialo</span>
+            <span className="wallet-footer-rialo">
+              <RialoMark size="mini" />
+              Designed for Rialo
+            </span>
             <span>Architecture simulation only</span>
           </footer>
         </section>
@@ -677,10 +679,11 @@ function TokensView() {
         <div>
           <strong>Moolo is watching quietly</strong>
           <span>
-            Every demo request is checked against your protection policies.
+            Designed for Rialo architecture simulation and private policy
+            evaluation.
           </span>
         </div>
-        <Sparkles size={16} aria-hidden="true" />
+        <RialoMark size="small" />
       </div>
     </div>
   );

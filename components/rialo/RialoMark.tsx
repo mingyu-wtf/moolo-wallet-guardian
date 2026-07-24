@@ -1,7 +1,7 @@
 import Image from "next/image";
 
 interface RialoMarkProps {
-  size?: "small" | "medium" | "large";
+  size?: "mini" | "small" | "medium" | "large";
   decorative?: boolean;
 }
 
