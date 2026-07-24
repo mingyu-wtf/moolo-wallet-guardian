@@ -49,4 +49,26 @@ test("a valid time lock survives serialization and sanitization", () => {
     restored.pendingTransfer?.endsAt,
     10_000 + initial.settings.timeLockSeconds * 1_000,
   );
+  assert.equal(
+    restored.pendingTransfer?.transaction.rialoWorkflow.traces.length,
+    4,
+  );
+});
+
+test("legacy activities are migrated into real simulated Rialo workflows", () => {
+  const initial = createInitialWalletData();
+  const legacy = { ...initial.activity[0] };
+  Reflect.deleteProperty(legacy, "rialoWorkflow");
+  const restored = sanitizePersistedWalletState({
+    ...initial,
+    activity: [legacy],
+  });
+
+  assert.equal(restored.activity.length, 1);
+  assert.equal(restored.activity[0].rialoWorkflow.traces.length, 4);
+  assert.ok(
+    restored.activity[0].rialoWorkflow.traces.every(
+      (trace) => trace.simulated,
+    ),
+  );
 });

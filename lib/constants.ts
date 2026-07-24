@@ -5,6 +5,7 @@ import type {
   TokenSymbol,
   WalletBalance,
 } from "@/types";
+import { createRialoWorkflow } from "@/lib/rialo";
 
 export const ADDRESSES = {
   user: "0x71F4A8C9B2E61D53047A823FCF14913E339A9A2C",
@@ -79,6 +80,17 @@ export const INITIAL_ACTIVITY: DemoTransaction[] = [
     riskLevel: "Low",
     reasons: ["Trusted address"],
     policies: ["Address reputation", "Reactive decision"],
+    rialoWorkflow: createRialoWorkflow({
+      kind: "received",
+      amount: 0.18,
+      token: "ETH",
+      assessment: {
+        score: 5,
+        level: "Low",
+        reasons: ["Trusted address"],
+        decision: "allow",
+      },
+    }),
     createdAt: Date.now() - 1000 * 60 * 42,
   },
 ];

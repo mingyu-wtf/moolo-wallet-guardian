@@ -2,9 +2,14 @@ import {
   createInitialWalletData,
   type WalletDataState,
 } from "@/lib/wallet-state";
+import { createLegacyRialoWorkflow } from "@/lib/rialo";
 import type {
   DemoScenario,
   DemoTransaction,
+  RialoExecutionTrace,
+  RialoPrimitive,
+  RialoTraceStatus,
+  RialoWorkflowSummary,
   RiskLevel,
   SecuritySettings,
   TokenSymbol,
@@ -39,6 +44,28 @@ const scenarios = new Set<DemoScenario>([
   "agent",
   "compromise",
   "guardian",
+]);
+const rialoPrimitives = new Set<RialoPrimitive>([
+  "reactive-transaction",
+  "native-timer",
+  "validator-attested-web-call",
+  "private-policy",
+]);
+const rialoTraceStatuses = new Set<RialoTraceStatus>([
+  "waiting",
+  "evaluating",
+  "triggered",
+  "completed",
+  "blocked",
+  "skipped",
+]);
+const rialoDecisions = new Set<RialoWorkflowSummary["finalDecision"]>([
+  "allow",
+  "delay",
+  "require-guardian",
+  "deny",
+  "freeze",
+  "recover",
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -109,6 +136,67 @@ function sanitizeSettings(
   };
 }
 
+function sanitizeRialoWorkflow(
+  value: unknown,
+): RialoWorkflowSummary | null {
+  if (
+    !isRecord(value) ||
+    typeof value.workflowName !== "string" ||
+    typeof value.predicateSummary !== "string" ||
+    !rialoDecisions.has(
+      value.finalDecision as RialoWorkflowSummary["finalDecision"],
+    ) ||
+    !Array.isArray(value.traces)
+  ) {
+    return null;
+  }
+
+  const traces = value.traces
+    .map((trace): RialoExecutionTrace | null => {
+      if (
+        !isRecord(trace) ||
+        typeof trace.id !== "string" ||
+        !rialoPrimitives.has(trace.primitive as RialoPrimitive) ||
+        typeof trace.title !== "string" ||
+        typeof trace.description !== "string" ||
+        !rialoTraceStatuses.has(trace.status as RialoTraceStatus) ||
+        trace.simulated !== true ||
+        typeof trace.createdAt !== "string"
+      ) {
+        return null;
+      }
+      return {
+        id: trace.id,
+        primitive: trace.primitive as RialoPrimitive,
+        title: trace.title,
+        description: trace.description,
+        status: trace.status as RialoTraceStatus,
+        simulated: true,
+        trigger:
+          typeof trace.trigger === "string" ? trace.trigger : undefined,
+        inputSummary:
+          typeof trace.inputSummary === "string"
+            ? trace.inputSummary
+            : undefined,
+        resultSummary:
+          typeof trace.resultSummary === "string"
+            ? trace.resultSummary
+            : undefined,
+        createdAt: trace.createdAt,
+      };
+    })
+    .filter((trace): trace is RialoExecutionTrace => trace !== null);
+
+  if (traces.length === 0) return null;
+  return {
+    workflowName: value.workflowName,
+    predicateSummary: value.predicateSummary,
+    finalDecision:
+      value.finalDecision as RialoWorkflowSummary["finalDecision"],
+    traces,
+  };
+}
+
 function sanitizeTransaction(value: unknown): DemoTransaction | null {
   if (!isRecord(value)) return null;
   if (
@@ -124,7 +212,7 @@ function sanitizeTransaction(value: unknown): DemoTransaction | null {
   ) {
     return null;
   }
-  return {
+  const transaction = {
     id: value.id,
     hash: value.hash,
     blockNumber: safeNumber(value.blockNumber, 0),
@@ -146,6 +234,12 @@ function sanitizeTransaction(value: unknown): DemoTransaction | null {
         )
       : ["Spending policy", "Address reputation", "Reactive decision"],
     createdAt: safeNumber(value.createdAt, Date.now()),
+  };
+  return {
+    ...transaction,
+    rialoWorkflow:
+      sanitizeRialoWorkflow(value.rialoWorkflow) ??
+      createLegacyRialoWorkflow(transaction),
   };
 }
 

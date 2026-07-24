@@ -21,9 +21,14 @@ import {
   X,
 } from "lucide-react";
 import { MooloMascot } from "@/components/moolo/MooloMascot";
+import {
+  RialoArchitectureOverview,
+  RialoWorkflowPanel,
+} from "@/components/rialo/RialoArchitecture";
 import { SimulationNotice } from "@/components/security/SimulationNotice";
 import { StatusBadge } from "@/components/security/StatusBadge";
 import { ADDRESSES, SECURITY_STEPS, TOKEN_PRICES } from "@/lib/constants";
+import { transitionRialoWorkflow } from "@/lib/rialo";
 import {
   createDemoTransaction,
   formatCurrency,
@@ -47,6 +52,7 @@ export type SecurityExperienceState =
   | { kind: "activity"; transaction: DemoTransaction }
   | { kind: "receive" }
   | { kind: "swap" }
+  | { kind: "architecture" }
   | { kind: "reset-confirm" };
 
 interface SecurityExperienceProps {
@@ -182,6 +188,7 @@ export function SecurityExperience({
         )}
         {experience.kind === "frozen" && (
           <FrozenExperience
+            transaction={experience.transaction}
             onClose={onClose}
             onChange={onChange}
           />
@@ -194,6 +201,9 @@ export function SecurityExperience({
         )}
         {experience.kind === "receive" && <ReceiveExperience onClose={onClose} />}
         {experience.kind === "swap" && <SwapExperience onClose={onClose} />}
+        {experience.kind === "architecture" && (
+          <RialoArchitectureOverview onClose={onClose} />
+        )}
         {experience.kind === "reset-confirm" && (
           <ResetExperience onClose={onClose} />
         )}
@@ -359,6 +369,7 @@ function AnalysisExperience({
         )}
         {isBlocked && <DetailRow label="Previous reports">128</DetailRow>}
       </div>
+      <RialoWorkflowPanel workflow={transaction.rialoWorkflow} />
       {assessment.decision === "timelock" ? (
         <div className="modal-action-stack">
           {actionError && (
@@ -438,12 +449,12 @@ function TimeLockExperience({
   );
   const [now, setNow] = useState(0);
   const [trackedPendingId] = useState(pending?.transaction.id ?? null);
-  const completed = trackedPendingId
-    ? activity.some(
+  const completedTransaction = trackedPendingId
+    ? activity.find(
         (item) =>
           item.id === trackedPendingId && item.status === "Confirmed",
       )
-    : false;
+    : undefined;
   const remaining = pending
     ? now === 0
       ? Math.max(
@@ -462,13 +473,17 @@ function TimeLockExperience({
     };
   }, []);
 
-  if (completed) {
+  if (completedTransaction) {
     return (
       <div className="modal-content centered-result">
         <MooloMascot state="safe" size="large" />
         <span className="eyebrow">Security delay complete</span>
         <h2 id="security-modal-title">Transfer confirmed</h2>
         <p>The simulated amount has now been deducted from the wallet.</p>
+        <RialoWorkflowPanel
+          workflow={completedTransaction.rialoWorkflow}
+          open={false}
+        />
         <button className="primary-button full-button" onClick={onClose}>
           Back to Wallet
         </button>
@@ -544,6 +559,7 @@ function TimeLockExperience({
           </div>
         ))}
       </div>
+      <RialoWorkflowPanel workflow={pending.transaction.rialoWorkflow} />
       <button className="primary-button full-button" onClick={requestGuardian}>
         <UserRoundCheck size={17} aria-hidden="true" />
         Request Guardian
@@ -564,10 +580,15 @@ function TimeLockExperience({
 
 function GuardianExperience({ onClose }: { onClose: () => void }) {
   const pending = useWalletStore((state) => state.pendingTransfer);
+  const activity = useWalletStore((state) => state.activity);
   const approvePending = useWalletStore((state) => state.approvePending);
   const cancelPending = useWalletStore((state) => state.cancelPending);
   const [result, setResult] = useState<"approved" | "rejected" | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [trackedTransaction] = useState(pending?.transaction);
+  const settledTransaction = trackedTransaction
+    ? activity.find((item) => item.id === trackedTransaction.id)
+    : undefined;
 
   if (result) {
     return (
@@ -585,6 +606,17 @@ function GuardianExperience({ onClose }: { onClose: () => void }) {
             ? "The simulated balance and activity have been updated."
             : "The transfer was cancelled. No demo funds moved."}
         </p>
+        {trackedTransaction && (
+          <RialoWorkflowPanel
+            workflow={
+              settledTransaction?.rialoWorkflow ??
+              transitionRialoWorkflow(
+                trackedTransaction.rialoWorkflow,
+                result === "approved" ? "Confirmed" : "Cancelled",
+              )
+            }
+          />
+        )}
         <button className="primary-button full-button" onClick={onClose}>
           Back to Wallet
         </button>
@@ -637,6 +669,7 @@ function GuardianExperience({ onClose }: { onClose: () => void }) {
           </div>
         ))}
       </div>
+      <RialoWorkflowPanel workflow={pending.transaction.rialoWorkflow} />
       <button
         className="primary-button full-button"
         onClick={() => {
@@ -706,6 +739,7 @@ function ContractExperience({
           <span>Unlimited token permission</span>
         </div>
       </div>
+      <RialoWorkflowPanel workflow={transaction.rialoWorkflow} />
       <button className="primary-button full-button" onClick={onClose}>
         Return to Wallet
       </button>
@@ -750,6 +784,7 @@ function AgentExperience({
         <Ban size={17} aria-hidden="true" />
         Demo funds untouched
       </div>
+      <RialoWorkflowPanel workflow={transaction.rialoWorkflow} />
       <button className="primary-button full-button" onClick={onClose}>
         Return to Wallet
       </button>
@@ -759,9 +794,11 @@ function AgentExperience({
 }
 
 function FrozenExperience({
+  transaction,
   onClose,
   onChange,
 }: {
+  transaction: DemoTransaction;
   onClose: () => void;
   onChange: (experience: SecurityExperienceState) => void;
 }) {
@@ -775,6 +812,9 @@ function FrozenExperience({
   );
   const [now, setNow] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [recoveryWorkflow, setRecoveryWorkflow] = useState(
+    recovery?.transaction.rialoWorkflow ?? null,
+  );
   const completionRef = useRef(false);
   const recoverySteps = [
     "Recovery requested",
@@ -842,6 +882,13 @@ function FrozenExperience({
             </div>
           ))}
         </div>
+        {(recovery?.transaction.rialoWorkflow ?? recoveryWorkflow) && (
+          <RialoWorkflowPanel
+            workflow={
+              recovery?.transaction.rialoWorkflow ?? recoveryWorkflow!
+            }
+          />
+        )}
         {recoveryFinished && (
           <>
             <div className="new-wallet-box">
@@ -884,6 +931,7 @@ function FrozenExperience({
           Demo balance secured
         </div>
       </div>
+      <RialoWorkflowPanel workflow={transaction.rialoWorkflow} />
       <button
         className="primary-button full-button"
         onClick={() => {
@@ -900,8 +948,10 @@ function FrozenExperience({
               decision: "allow",
             },
             status: "Recovered",
+            rialoKind: "recovery",
             policies: ["Emergency freeze", "Guardian recovery"],
           });
+          setRecoveryWorkflow(recoveryTransaction.rialoWorkflow);
           beginRecovery(recoveryTransaction);
           setRecovering(true);
           setNow(Date.now());
@@ -981,6 +1031,7 @@ function ActivityExperience({
           ))}
         </ul>
       </section>
+      <RialoWorkflowPanel workflow={transaction.rialoWorkflow} />
       <div className="hash-box">
         <span>Simulated transaction hash</span>
         <code>{transaction.hash}</code>

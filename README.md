@@ -32,6 +32,8 @@ generated or stored locally in the browser.
 - Corruption-safe persisted state migration and a confirmed full reset
 - Keyboard-contained dialogs, focus restoration, reduced motion, and live feedback
 - Desktop presentation control panel and a mobile demo sheet
+- Official supplied Rialo mark in restrained welcome, network, and architecture UI
+- Scenario-specific Rialo workflow summaries with four persisted execution traces
 
 ## Technology
 
@@ -68,7 +70,8 @@ phishing blocking, unknown contracts, agent overspend, disabled optional
 protection, score clamping, and risk-level boundaries. State-transition tests
 cover single balance deduction, Time Lock completion and cancellation, Guardian
 idempotency, Freeze/Recovery, insufficient simulated funds, and persisted-state
-sanitization.
+sanitization. Rialo workflow tests verify all four primitives, scenario-specific
+decisions, timer transitions, safe architecture labels, and legacy migration.
 The rendered-output tests verify the Moolo metadata, social card, starter cleanup,
 and persistent simulation-only disclosure.
 
@@ -106,19 +109,29 @@ Before a live Builders Hub session:
 5. Run Wallet Compromise, complete all five recovery steps, and confirm Send is
    available again.
 6. Open Activity details to show reasons, applied policies, simulated fee,
-   block, timestamp, and 64-hex-character transaction hash.
+   block, timestamp, transaction hash, and the persisted Rialo execution trace.
+7. Open **Why Rialo?** in Shield or the header network badge to explain the
+   architecture and its explicit simulation boundary.
 
 Scenario controls refuse conflicting pending/frozen flows and explain when a
 reset is required to restore enough simulated funds.
 
 ## Rialo concept mapping
 
-Moolo uses local simulation to illustrate future Rialo-oriented product ideas:
+Moolo uses a local, typed workflow model to illustrate four Rialo-oriented
+architecture primitives:
 
-- **Reactive Execution:** risk policies run before a transaction result is shown.
-- **Native Timers:** high-risk transfers can enter a persistent security delay.
-- **Privacy:** no user identity, signature, or wallet connection is required.
-- **Native Web Calls:** address reputation and contract analysis are represented
-  as local deterministic data, showing where native information access could fit.
+- **Reactive Transaction:** a predefined predicate can automatically allow,
+  delay, deny, freeze, or route a request to a guardian.
+- **Native Timer:** Time Lock, guardian wait, and recovery paths expose a
+  simulated time-condition state.
+- **Validator-attested Web Call:** deterministic local reputation, contract, and
+  behavior data stands in for a **Simulated external signal**.
+- **Private Policy Evaluation:** the result is visible while sensitive policy
+  inputs remain summarized as a **REX concept simulation**.
 
-This is a concept demonstration only. It is not a live Rialo integration.
+Every major scenario creates a `RialoWorkflowSummary` with four
+`RialoExecutionTrace` records. Their statuses transition with the simulated
+transaction and persist into Activity details. This is a local front-end
+architecture concept only: no Rialo SDK, RPC, validator, confidential execution,
+or live network is used.

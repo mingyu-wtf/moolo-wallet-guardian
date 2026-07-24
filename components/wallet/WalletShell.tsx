@@ -27,6 +27,8 @@ import {
 import { DemoPanel } from "@/components/demo/DemoPanel";
 import { Brand } from "@/components/moolo/Brand";
 import { MooloMascot } from "@/components/moolo/MooloMascot";
+import { RialoPrimitiveGrid } from "@/components/rialo/RialoArchitecture";
+import { RialoMark } from "@/components/rialo/RialoMark";
 import {
   SecurityExperience,
   type SecurityExperienceState,
@@ -206,6 +208,7 @@ export function WalletShell() {
       to: scenarioInput.to,
       assessment,
       status,
+      rialoKind: scenario,
       policies:
         scenario === "agent"
           ? ["AI agent daily limit", "Reactive decision"]
@@ -355,10 +358,18 @@ export function WalletShell() {
         <section className="wallet-frame">
           <header className="wallet-header">
             <Brand compact showMascot={false} />
-            <div className="network-label">
-              <span />
-              Moolo Demo Network
-            </div>
+            <button
+              className="network-label rialo-network-button"
+              type="button"
+              onClick={() => setExperience({ kind: "architecture" })}
+              aria-label="Open Rialo architecture overview"
+            >
+              <RialoMark size="small" />
+              <span className="rialo-network-copy">
+                <strong>Rialo Concept Network</strong>
+                <small>Simulation</small>
+              </span>
+            </button>
             <div className="wallet-header-actions">
               <button
                 ref={mobileTriggerRef}
@@ -527,7 +538,12 @@ export function WalletShell() {
                     />
                   )}
                   {view === "shield" && (
-                    <ShieldView onFreeze={() => handleScenario("compromise")} />
+                    <ShieldView
+                      onFreeze={() => handleScenario("compromise")}
+                      onArchitecture={() =>
+                        setExperience({ kind: "architecture" })
+                      }
+                    />
                   )}
                 </motion.div>
               </AnimatePresence>
@@ -535,8 +551,8 @@ export function WalletShell() {
           )}
 
           <footer className="wallet-footer">
-            <span>Rialo-ready concept</span>
-            <span>Browser simulation only</span>
+            <span>Designed for Rialo</span>
+            <span>Architecture simulation only</span>
           </footer>
         </section>
 
@@ -727,7 +743,13 @@ function ActivityView({
   );
 }
 
-function ShieldView({ onFreeze }: { onFreeze: () => void }) {
+function ShieldView({
+  onFreeze,
+  onArchitecture,
+}: {
+  onFreeze: () => void;
+  onArchitecture: () => void;
+}) {
   const settings = useWalletStore((state) => state.settings);
   const updateSettings = useWalletStore((state) => state.updateSettings);
   const protectionState = useWalletStore((state) => state.protectionState);
@@ -887,6 +909,28 @@ function ShieldView({ onFreeze }: { onFreeze: () => void }) {
         <LockKeyhole size={17} aria-hidden="true" />
         Simulate Emergency Freeze
       </button>
+      <section className="why-rialo-card">
+        <div className="why-rialo-heading">
+          <RialoMark size="medium" />
+          <div>
+            <span className="eyebrow">Rialo Concept Demo</span>
+            <strong>Why Rialo?</strong>
+            <p>
+              Moolo combines multiple Rialo-native concepts into one wallet
+              protection workflow.
+            </p>
+          </div>
+        </div>
+        <RialoPrimitiveGrid compact />
+        <button
+          className="secondary-button full-button"
+          type="button"
+          onClick={onArchitecture}
+        >
+          Explore the architecture
+          <ChevronRight size={17} aria-hidden="true" />
+        </button>
+      </section>
     </div>
   );
 }

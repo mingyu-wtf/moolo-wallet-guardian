@@ -23,6 +23,46 @@ export interface SecuritySettings {
 
 export type RiskLevel = "Low" | "Medium" | "High" | "Critical";
 
+export type RialoPrimitive =
+  | "reactive-transaction"
+  | "native-timer"
+  | "validator-attested-web-call"
+  | "private-policy";
+
+export type RialoTraceStatus =
+  | "waiting"
+  | "evaluating"
+  | "triggered"
+  | "completed"
+  | "blocked"
+  | "skipped";
+
+export interface RialoExecutionTrace {
+  id: string;
+  primitive: RialoPrimitive;
+  title: string;
+  description: string;
+  status: RialoTraceStatus;
+  simulated: true;
+  trigger?: string;
+  inputSummary?: string;
+  resultSummary?: string;
+  createdAt: string;
+}
+
+export interface RialoWorkflowSummary {
+  workflowName: string;
+  predicateSummary: string;
+  finalDecision:
+    | "allow"
+    | "delay"
+    | "require-guardian"
+    | "deny"
+    | "freeze"
+    | "recover";
+  traces: RialoExecutionTrace[];
+}
+
 export type TransactionStatus =
   | "Confirmed"
   | "Blocked"
@@ -48,6 +88,7 @@ export interface DemoTransaction {
   riskLevel: RiskLevel;
   reasons: string[];
   policies: string[];
+  rialoWorkflow: RialoWorkflowSummary;
   createdAt: number;
 }
 

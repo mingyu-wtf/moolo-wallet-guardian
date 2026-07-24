@@ -132,7 +132,7 @@ export const useWalletStore = create<WalletState>()(
     }),
     {
       name: "moolo-wallet",
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => safeBrowserStorage),
       skipHydration: true,
       migrate: (persistedState) =>

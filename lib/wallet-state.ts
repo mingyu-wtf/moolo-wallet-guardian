@@ -4,6 +4,7 @@ import {
   DEFAULT_SETTINGS,
   INITIAL_ACTIVITY,
 } from "@/lib/constants";
+import { transitionRialoTransaction } from "@/lib/rialo";
 import type {
   DemoScenario,
   DemoTransaction,
@@ -67,10 +68,10 @@ export function upsertActivity(
   status: DemoTransaction["status"] = transaction.status,
 ): DemoTransaction[] {
   const existing = activity.find((item) => item.id === transaction.id);
+  const transitioned = transitionRialoTransaction(transaction, status);
   const updated = {
-    ...(existing ?? transaction),
-    ...transaction,
-    status,
+    ...(existing ?? transitioned),
+    ...transitioned,
     createdAt: existing?.createdAt ?? transaction.createdAt,
   };
   return [updated, ...activity.filter((item) => item.id !== transaction.id)];
@@ -144,7 +145,7 @@ export function startTimeLockState(
   ) {
     return state;
   }
-  const timelocked = { ...transaction, status: "Timelocked" as const };
+  const timelocked = transitionRialoTransaction(transaction, "Timelocked");
   return {
     ...state,
     pendingTransfer: {
@@ -165,10 +166,10 @@ export function requestGuardianState(state: WalletDataState): WalletDataState {
   ) {
     return state;
   }
-  const awaiting = {
-    ...state.pendingTransfer.transaction,
-    status: "Awaiting Guardian" as const,
-  };
+  const awaiting = transitionRialoTransaction(
+    state.pendingTransfer.transaction,
+    "Awaiting Guardian",
+  );
   return {
     ...state,
     pendingTransfer: {
@@ -217,7 +218,7 @@ export function freezeWalletState(
 ): WalletDataState {
   if (state.protectionState === "Frozen") return state;
   const withoutPending = cancelPendingState(state);
-  const frozen = { ...transaction, status: "Frozen" as const };
+  const frozen = transitionRialoTransaction(transaction, "Frozen");
   return {
     ...withoutPending,
     view: withoutPending.view === "send" ? "tokens" : withoutPending.view,

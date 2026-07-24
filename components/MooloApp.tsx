@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, KeyRound, ShieldCheck } from "lucide-react";
 import { Brand } from "@/components/moolo/Brand";
 import { MooloMascot } from "@/components/moolo/MooloMascot";
+import { RialoMark } from "@/components/rialo/RialoMark";
 import { SimulationNotice } from "@/components/security/SimulationNotice";
 import { WalletShell } from "@/components/wallet/WalletShell";
 import { useWalletStore } from "@/store/wallet-store";
@@ -88,6 +89,13 @@ export function MooloApp() {
                 <span>Reactive execution</span>
                 <span>Native timers</span>
                 <span>Privacy-first</span>
+              </div>
+              <div className="welcome-rialo">
+                <RialoMark size="medium" />
+                <span>
+                  <strong>Designed for Rialo</strong>
+                  <small>Rialo Architecture Simulation</small>
+                </span>
               </div>
             </div>
             <div className="mascot-stage" aria-hidden="true">

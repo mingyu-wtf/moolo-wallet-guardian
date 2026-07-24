@@ -11,6 +11,7 @@ import {
   requestGuardianState,
   startTimeLockState,
 } from "../lib/wallet-state";
+import { createRialoWorkflow } from "../lib/rialo";
 import type { DemoTransaction, TransactionStatus } from "../types";
 
 function transaction(
@@ -33,6 +34,17 @@ function transaction(
     riskLevel: "Low",
     reasons: ["Trusted address"],
     policies: ["Address reputation"],
+    rialoWorkflow: createRialoWorkflow({
+      kind: "manual",
+      amount,
+      token: "USDC",
+      assessment: {
+        score: 5,
+        level: "Low",
+        reasons: ["Trusted address"],
+        decision: "allow",
+      },
+    }),
     createdAt: 1_000,
   };
 }

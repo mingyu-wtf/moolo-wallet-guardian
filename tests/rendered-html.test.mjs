@@ -39,7 +39,7 @@ test("renders Moolo metadata and simulation shell", async () => {
 });
 
 test("keeps the simulation-only promise visible in product UI", async () => {
-  const [app, notice, wallet, security, demo] = await Promise.all([
+  const [app, notice, wallet, security, demo, architecture, mark, rialoModel] = await Promise.all([
     readFile(new URL("../components/MooloApp.tsx", import.meta.url), "utf8"),
     readFile(
       new URL("../components/security/SimulationNotice.tsx", import.meta.url),
@@ -60,6 +60,15 @@ test("keeps the simulation-only promise visible in product UI", async () => {
       new URL("../components/demo/DemoPanel.tsx", import.meta.url),
       "utf8",
     ),
+    readFile(
+      new URL("../components/rialo/RialoArchitecture.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/rialo/RialoMark.tsx", import.meta.url),
+      "utf8",
+    ),
+    readFile(new URL("../lib/rialo.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(app, /Enter Demo Wallet/);
@@ -69,5 +78,18 @@ test("keeps the simulation-only promise visible in product UI", async () => {
   assert.match(wallet, /DemoPanel/);
   assert.match(demo, /Demo Control Panel/);
   assert.match(security, /SimulationNotice/);
-  assert.doesNotMatch(`${app}${wallet}${security}`, /MetaMask|WalletConnect/);
+  assert.match(app, /Designed for Rialo/);
+  assert.match(wallet, /Rialo Concept Network/);
+  assert.match(architecture, /Rialo Architecture Simulation/);
+  assert.match(architecture, /Simulated Rialo Execution/);
+  assert.match(rialoModel, /Simulated external signal/);
+  assert.match(rialoModel, /REX concept simulation/);
+  assert.match(mark, /\/brand\/rialo-mark\.png/);
+
+  const productSource = `${app}${wallet}${security}${architecture}${mark}${rialoModel}`;
+  assert.doesNotMatch(productSource, /MetaMask|WalletConnect/);
+  assert.doesNotMatch(
+    productSource,
+    /Live on Rialo|Secured onchain by Rialo|Real Rialo transaction|Rialo network connected|Executed by Rialo validators|Powered by Rialo mainnet/i,
+  );
 });

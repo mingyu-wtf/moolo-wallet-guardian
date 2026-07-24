@@ -1,3 +1,7 @@
+import {
+  createRialoWorkflow,
+  type RialoWorkflowKind,
+} from "@/lib/rialo";
 import type { DemoTransaction, RiskAssessment, TokenSymbol } from "@/types";
 
 export function shortAddress(address: string): string {
@@ -27,6 +31,7 @@ interface TransactionInput {
   assessment: RiskAssessment;
   status: DemoTransaction["status"];
   policies?: string[];
+  rialoKind?: RialoWorkflowKind;
 }
 
 export function createDemoTransaction(
@@ -50,6 +55,12 @@ export function createDemoTransaction(
       "Address reputation",
       "Reactive decision",
     ],
+    rialoWorkflow: createRialoWorkflow({
+      kind: input.rialoKind ?? "manual",
+      assessment: input.assessment,
+      amount: input.amount,
+      token: input.token,
+    }),
     createdAt: Date.now(),
   };
 }

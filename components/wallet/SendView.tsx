@@ -83,6 +83,7 @@ export function SendView({ onCancel, onAnalyze }: SendViewProps) {
       from: walletAddress,
       to: recipient,
       assessment,
+      rialoKind: "manual",
       status:
         assessment.decision === "block"
           ? "Blocked"
@@ -125,7 +126,8 @@ export function SendView({ onCancel, onAnalyze }: SendViewProps) {
           </div>
           <div className="detail-row">
             <span>Network</span>
-            <strong>Moolo Demo Network</strong>
+            <strong>Rialo Concept Network</strong>
+            <small>Simulation</small>
           </div>
           <div className="detail-row">
             <span>Network fee</span>

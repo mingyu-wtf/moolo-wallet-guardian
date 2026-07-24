@@ -19,6 +19,9 @@
   --danger-soft: #ffebec;
   --purple: #6d5bd0;
   --purple-soft: #eeebff;
+  --rialo-mint: #a9ddd3;
+  --rialo-cream: #e8e3d5;
+  --rialo-black: #010101;
   --shadow: 0 26px 70px rgba(32, 50, 39, 0.12);
 }
 
@@ -2589,6 +2592,448 @@ button:disabled {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+}
+
+/* Rialo architecture concept layer */
+.rialo-mark {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--rialo-cream);
+}
+
+.rialo-mark img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.rialo-mark-small {
+  width: 24px;
+  height: 24px;
+}
+
+.rialo-mark-medium {
+  width: 42px;
+  height: 42px;
+}
+
+.rialo-mark-large {
+  width: 72px;
+  height: 72px;
+}
+
+.welcome-rialo {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 22px;
+  padding: 9px 12px 9px 9px;
+  border: 1px solid #d5d5cb;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.welcome-rialo > span {
+  display: grid;
+  gap: 3px;
+}
+
+.welcome-rialo strong {
+  font-size: 12px;
+}
+
+.welcome-rialo small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.network-label.rialo-network-button {
+  min-height: 38px;
+  padding: 5px 9px 5px 5px;
+  border-color: #d8ddd8;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+}
+
+.network-label.rialo-network-button > .rialo-network-copy {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  display: grid;
+  gap: 1px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.network-label.rialo-network-button > .rialo-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 0;
+  background: var(--rialo-cream);
+  box-shadow: none;
+}
+
+.rialo-network-button strong {
+  color: var(--ink);
+  font-size: 9px;
+  line-height: 1.1;
+}
+
+.rialo-network-button small {
+  color: #477d74;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.why-rialo-card {
+  margin-top: 17px;
+  padding: 15px;
+  border: 1px solid #cbded9;
+  border-radius: 16px;
+  background:
+    linear-gradient(145deg, rgba(169, 221, 211, 0.22), transparent 55%),
+    #fbfdfc;
+}
+
+.why-rialo-heading {
+  margin-bottom: 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.why-rialo-heading > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.why-rialo-heading strong {
+  font-size: 16px;
+}
+
+.why-rialo-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.rialo-primitive-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.rialo-primitive-card {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #d9e3e0;
+  border-radius: 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  background: #fff;
+}
+
+.rialo-primitive-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  background: rgba(169, 221, 211, 0.35);
+  color: #235c52;
+}
+
+.rialo-primitive-card > div {
+  min-width: 0;
+}
+
+.rialo-primitive-card strong {
+  display: block;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.rialo-primitive-card p {
+  margin: 5px 0 7px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.rialo-primitive-card small {
+  color: #39766b;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.rialo-primitive-grid.is-compact {
+  grid-template-columns: 1fr;
+  gap: 7px;
+}
+
+.rialo-primitive-grid.is-compact .rialo-primitive-card {
+  padding: 9px;
+}
+
+.rialo-primitive-grid.is-compact .rialo-primitive-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.rialo-primitive-grid.is-compact .rialo-primitive-card p {
+  display: none;
+}
+
+.why-rialo-card > .secondary-button {
+  margin-top: 12px;
+}
+
+.rialo-architecture-content {
+  width: min(100%, 640px);
+}
+
+.rialo-architecture-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.rialo-architecture-brand > div {
+  min-width: 0;
+}
+
+.rialo-architecture-brand h2 {
+  margin: 4px 0 7px;
+}
+
+.rialo-architecture-brand p,
+.rialo-disclaimer p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.rialo-architecture-content > .rialo-primitive-grid {
+  margin-top: 17px;
+}
+
+.rialo-disclaimer {
+  margin: 14px 0;
+  padding: 12px 13px;
+  border-left: 3px solid var(--rialo-mint);
+  background: #f5f7f5;
+}
+
+.rialo-disclaimer strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+
+.rialo-workflow-panel {
+  margin: 14px 0;
+  border: 1px solid #cfe0dc;
+  border-radius: 13px;
+  overflow: hidden;
+  background: #fbfdfc;
+}
+
+.rialo-workflow-panel > summary {
+  min-height: 44px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.rialo-workflow-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.rialo-workflow-panel > summary > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #285e55;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.rialo-workflow-panel > summary > strong {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(169, 221, 211, 0.38);
+  color: #204e46;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.rialo-workflow-body {
+  padding: 0 12px 12px;
+  border-top: 1px solid #dfebe8;
+}
+
+.rialo-workflow-heading {
+  padding: 11px 0 8px;
+}
+
+.rialo-workflow-heading > span {
+  display: block;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.rialo-workflow-heading > strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+}
+
+.rialo-workflow-heading p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.rialo-trace-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rialo-trace {
+  position: relative;
+  min-height: 48px;
+  padding: 0 0 10px 22px;
+}
+
+.rialo-trace:not(:last-child)::before {
+  position: absolute;
+  top: 12px;
+  bottom: -1px;
+  left: 5px;
+  width: 2px;
+  background: var(--rialo-mint);
+  content: "";
+}
+
+.rialo-trace-node {
+  position: absolute;
+  top: 5px;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border: 3px solid var(--rialo-mint);
+  border-radius: 50%;
+  background: #fff;
+}
+
+.trace-blocked .rialo-trace-node {
+  border-color: var(--danger);
+}
+
+.trace-waiting .rialo-trace-node {
+  border-color: var(--warning);
+}
+
+.trace-skipped {
+  opacity: 0.62;
+}
+
+.rialo-trace-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rialo-trace-title strong {
+  font-size: 10px;
+}
+
+.rialo-trace-title i {
+  color: #3f756c;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.rialo-trace p {
+  margin: 3px 0;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.rialo-trace small {
+  color: #3d7369;
+  font-size: 7px;
+  font-weight: 800;
+}
+
+@media (max-width: 620px) {
+  .rialo-primitive-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rialo-architecture-brand {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 390px) {
+  .network-label.rialo-network-button {
+    padding-right: 5px;
+  }
+
+  .rialo-network-button strong {
+    max-width: 82px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .welcome-rialo {
+    width: 100%;
+  }
+
+  .rialo-mark-large {
+    width: 60px;
+    height: 60px;
+  }
+
+  .rialo-architecture-brand {
+    gap: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .network-label.rialo-network-button {
+    min-width: 0;
+    display: flex;
+  }
+
+  .wallet-header-actions .icon-button:not(.mobile-demo-trigger) {
+    display: none;
   }
 }
 
