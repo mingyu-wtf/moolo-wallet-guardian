@@ -8,12 +8,12 @@ import { ADDRESSES, TOKENS, TOKEN_PRICES } from "@/lib/constants";
 import { calculateRisk } from "@/lib/risk-engine";
 import {
   createDemoTransaction,
-  formatCurrency,
   isEvmAddress,
   shortAddress,
 } from "@/lib/simulation";
 import { useWalletStore } from "@/store/wallet-store";
 import type { DemoTransaction, TokenSymbol } from "@/types";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface SendViewProps {
   onCancel: () => void;
@@ -24,6 +24,7 @@ interface SendViewProps {
 }
 
 export function SendView({ onCancel, onAnalyze }: SendViewProps) {
+  const { t, tx, formatCurrency, formatNumber } = useTranslation();
   const balances = useWalletStore((state) => state.balances);
   const settings = useWalletStore((state) => state.settings);
   const walletAddress = useWalletStore((state) => state.walletAddress);
@@ -103,17 +104,19 @@ export function SendView({ onCancel, onAnalyze }: SendViewProps) {
           onClick={() => setReviewing(false)}
         >
           <ChevronDown size={17} aria-hidden="true" />
-          Edit transfer
+          {t("Edit transfer")}
         </button>
-        <span className="eyebrow">Step 2 of 2</span>
-        <h2>Transaction review</h2>
+        <span className="eyebrow">{t("Step 2 of 2")}</span>
+        <h2>{t("Transaction review")}</h2>
         <p className="section-copy">
-          Confirm the simulated request before Moolo runs its security checks.
+          {t(
+            "Confirm the simulated request before Moolo runs its security checks.",
+          )}
         </p>
         <div className="review-amount">
-          <span>Sending</span>
+          <span>{t("Sending")}</span>
           <strong>
-            {numericAmount.toLocaleString()} {token}
+            {formatNumber(numericAmount)} {token}
           </strong>
           <small>
             {formatCurrency(numericAmount * TOKEN_PRICES[token])}
@@ -121,35 +124,35 @@ export function SendView({ onCancel, onAnalyze }: SendViewProps) {
         </div>
         <div className="transaction-summary">
           <div className="detail-row">
-            <span>Recipient</span>
+            <span>{t("Recipient")}</span>
             <strong>{shortAddress(recipient)}</strong>
           </div>
           <div className="detail-row">
-            <span>Environment</span>
-            <strong>Rialo Concept Demo</strong>
-            <small>Architecture simulation</small>
+            <span>{t("Environment")}</span>
+            <strong>{t("Rialo Concept Demo")}</strong>
+            <small>{t("Architecture simulation")}</small>
           </div>
           <div className="detail-row">
-            <span>Network fee</span>
+            <span>{t("Network fee")}</span>
             <strong>~0.0004 ETH</strong>
           </div>
           <div className="detail-row">
-            <span>Risk</span>
+            <span>{t("Risk")}</span>
             <strong>
               <StatusBadge value={assessment.level} />
             </strong>
           </div>
         </div>
         <div className="applied-policies">
-          <strong>Applied Moolo policies</strong>
+          <strong>{t("Applied Moolo policies")}</strong>
           <span>
-            <ShieldCheck size={14} /> Spending limit
+            <ShieldCheck size={14} /> {t("Spending limit")}
           </span>
           <span>
-            <ShieldCheck size={14} /> Address reputation
+            <ShieldCheck size={14} /> {t("Address reputation")}
           </span>
           <span>
-            <ShieldCheck size={14} /> Reactive decision
+            <ShieldCheck size={14} /> {t("Reactive decision")}
           </span>
         </div>
         <button
@@ -158,11 +161,11 @@ export function SendView({ onCancel, onAnalyze }: SendViewProps) {
           onClick={handleConfirm}
           disabled={submitting}
         >
-          Confirm & Run Security Check
+          {t("Confirm & Run Security Check")}
           <ChevronRight size={17} aria-hidden="true" />
         </button>
         <button className="text-button" type="button" onClick={onCancel}>
-          Cancel Transfer
+          {t("Cancel Transfer")}
         </button>
         <SimulationNotice compact />
       </section>
@@ -173,16 +176,18 @@ export function SendView({ onCancel, onAnalyze }: SendViewProps) {
     <section className="send-view">
       <button className="back-button" type="button" onClick={onCancel}>
         <ChevronDown size={17} aria-hidden="true" />
-        Wallet
+        {t("Wallet")}
       </button>
-      <span className="eyebrow">Step 1 of 2</span>
-      <h2>Send demo assets</h2>
+      <span className="eyebrow">{t("Step 1 of 2")}</span>
+      <h2>{t("Send demo assets")}</h2>
       <p className="section-copy">
-        Build a request, then watch Moolo analyze it before anything changes.
+        {t(
+          "Build a request, then watch Moolo analyze it before anything changes.",
+        )}
       </p>
       <form onSubmit={handleReview} noValidate>
         <fieldset className="asset-selector">
-          <legend>Choose asset</legend>
+          <legend>{t("Choose asset")}</legend>
           <div>
             {TOKENS.map((item) => (
               <button
@@ -204,7 +209,7 @@ export function SendView({ onCancel, onAnalyze }: SendViewProps) {
                 </span>
                 <strong>{item.symbol}</strong>
                 <small>
-                  {balances[item.symbol].toLocaleString(undefined, {
+                  {formatNumber(balances[item.symbol], {
                     maximumFractionDigits: 4,
                   })}
                 </small>
@@ -213,7 +218,7 @@ export function SendView({ onCancel, onAnalyze }: SendViewProps) {
           </div>
         </fieldset>
         <label className="form-label" htmlFor="recipient">
-          Recipient address
+          {t("Recipient address")}
         </label>
         <div className="address-input">
           <input
@@ -234,22 +239,25 @@ export function SendView({ onCancel, onAnalyze }: SendViewProps) {
             }
           />
         </div>
-        <div className="quick-addresses" aria-label="Quick recipient choices">
+        <div
+          className="quick-addresses"
+          aria-label={t("Quick recipient choices")}
+        >
           <button type="button" onClick={() => setRecipient(ADDRESSES.trusted)}>
-            Trusted Address
+            {t("Trusted Address")}
           </button>
           <button type="button" onClick={() => setRecipient(ADDRESSES.new)}>
-            New Address
+            {t("New Address")}
           </button>
           <button
             type="button"
             onClick={() => setRecipient(ADDRESSES.phishing)}
           >
-            Phishing Address
+            {t("Phishing Address")}
           </button>
         </div>
         <label className="form-label" htmlFor="send-amount">
-          Amount
+          {t("Amount")}
         </label>
         <div className="amount-input">
           <input
@@ -266,7 +274,7 @@ export function SendView({ onCancel, onAnalyze }: SendViewProps) {
             type="button"
             onClick={() => setAmount(String(balances[token]))}
           >
-            Max
+            {t("Max")}
           </button>
           <strong>{token}</strong>
         </div>
@@ -275,16 +283,16 @@ export function SendView({ onCancel, onAnalyze }: SendViewProps) {
             {formatCurrency((numericAmount || 0) * TOKEN_PRICES[token])}
           </span>
           <span>
-            Balance: {balances[token].toLocaleString()} {token}
+            {t("Balance")}: {formatNumber(balances[token])} {token}
           </span>
         </div>
         {error && (
           <p className="field-error" id="send-error" role="alert">
-            {error}
+          {tx(error)}
           </p>
         )}
         <button className="primary-button full-button" type="submit">
-          Review Transaction
+          {t("Review Transaction")}
           <ChevronRight size={17} aria-hidden="true" />
         </button>
       </form>

@@ -3,6 +3,7 @@ import {
   type WalletDataState,
 } from "@/lib/wallet-state";
 import { createLegacyRialoWorkflow } from "@/lib/rialo";
+import { MOOLO_STORAGE_KEYS } from "@/lib/moolo-storage";
 import type {
   DemoScenario,
   DemoTransaction,
@@ -15,6 +16,9 @@ import type {
   TokenSymbol,
   TransactionStatus,
 } from "@/types";
+
+export const WALLET_STORAGE_KEY = MOOLO_STORAGE_KEYS.wallet;
+export const WALLET_STORAGE_VERSION = 4;
 
 const screens = new Set(["welcome", "unlock", "wallet"]);
 const views = new Set(["tokens", "activity", "shield", "send"]);
@@ -72,6 +76,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+interface PersistedWalletEnvelope {
+  state: WalletDataState;
+  version: number;
+}
+
 function safeNumber(
   value: unknown,
   fallback: number,
@@ -81,6 +90,27 @@ function safeNumber(
   return typeof value === "number" && Number.isFinite(value)
     ? Math.min(max, Math.max(min, value))
     : fallback;
+}
+
+function safeTimestamp(value: unknown, fallback: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return fallback;
+  }
+  return Number.isFinite(new Date(value).getTime()) ? value : fallback;
+}
+
+function validTimestamp(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return null;
+  }
+  return Number.isFinite(new Date(value).getTime()) ? value : null;
+}
+
+function safeIsoTimestamp(value: unknown): string | null {
+  if (typeof value !== "string" || !Number.isFinite(Date.parse(value))) {
+    return null;
+  }
+  return value;
 }
 
 function safeBoolean(value: unknown, fallback: boolean): boolean {
@@ -161,7 +191,7 @@ function sanitizeRialoWorkflow(
         typeof trace.description !== "string" ||
         !rialoTraceStatuses.has(trace.status as RialoTraceStatus) ||
         trace.simulated !== true ||
-        typeof trace.createdAt !== "string"
+        !safeIsoTimestamp(trace.createdAt)
       ) {
         return null;
       }
@@ -182,12 +212,18 @@ function sanitizeRialoWorkflow(
           typeof trace.resultSummary === "string"
             ? trace.resultSummary
             : undefined,
-        createdAt: trace.createdAt,
+        createdAt: trace.createdAt as string,
       };
     })
     .filter((trace): trace is RialoExecutionTrace => trace !== null);
 
-  if (traces.length === 0) return null;
+  if (
+    traces.length !== rialoPrimitives.size ||
+    new Set(traces.map((trace) => trace.primitive)).size !==
+      rialoPrimitives.size
+  ) {
+    return null;
+  }
   return {
     workflowName: value.workflowName,
     predicateSummary: value.predicateSummary,
@@ -233,7 +269,7 @@ function sanitizeTransaction(value: unknown): DemoTransaction | null {
           (item): item is string => typeof item === "string",
         )
       : ["Spending policy", "Address reputation", "Reactive decision"],
-    createdAt: safeNumber(value.createdAt, Date.now()),
+    createdAt: safeTimestamp(value.createdAt, Date.now()),
   };
   return {
     ...transaction,
@@ -243,14 +279,19 @@ function sanitizeTransaction(value: unknown): DemoTransaction | null {
   };
 }
 
-export function sanitizePersistedWalletState(
+function normalizeWalletState(
   value: unknown,
 ): WalletDataState {
   const fallback = createInitialWalletData();
   if (!isRecord(value)) return fallback;
 
-  const rawActivity = Array.isArray(value.activity)
-    ? value.activity.map(sanitizeTransaction).filter(Boolean)
+  const activityValue = Array.isArray(value.activity)
+    ? value.activity
+    : Array.isArray(value.transactions)
+      ? value.transactions
+      : null;
+  const rawActivity = activityValue
+    ? activityValue.map(sanitizeTransaction).filter(Boolean)
     : fallback.activity;
   const seen = new Set<string>();
   const activity = (rawActivity as DemoTransaction[]).filter((transaction) => {
@@ -261,22 +302,30 @@ export function sanitizePersistedWalletState(
 
   const pendingValue = isRecord(value.pendingTransfer)
     ? value.pendingTransfer
-    : null;
+    : isRecord(value.timeLock)
+      ? value.timeLock
+      : null;
   const pendingTransaction = pendingValue
     ? sanitizeTransaction(pendingValue.transaction)
+    : null;
+  const pendingStartedAt = pendingValue
+    ? validTimestamp(pendingValue.startedAt)
+    : null;
+  const pendingEndsAt = pendingValue
+    ? validTimestamp(pendingValue.endsAt)
     : null;
   const pendingTransfer =
     pendingValue &&
     pendingTransaction &&
+    pendingStartedAt !== null &&
+    pendingEndsAt !== null &&
+    pendingEndsAt >= pendingStartedAt &&
     (pendingTransaction.status === "Timelocked" ||
       pendingTransaction.status === "Awaiting Guardian")
       ? {
           transaction: pendingTransaction,
-          startedAt: safeNumber(
-            pendingValue.startedAt,
-            Date.now(),
-          ),
-          endsAt: safeNumber(pendingValue.endsAt, Date.now()),
+          startedAt: pendingStartedAt,
+          endsAt: pendingEndsAt,
         }
       : null;
 
@@ -284,11 +333,14 @@ export function sanitizePersistedWalletState(
   const recoveryTransaction = recoveryValue
     ? sanitizeTransaction(recoveryValue.transaction)
     : null;
+  const recoveryStartedAt = recoveryValue
+    ? validTimestamp(recoveryValue.startedAt)
+    : null;
   const recovery =
-    recoveryValue && recoveryTransaction
+    recoveryValue && recoveryTransaction && recoveryStartedAt !== null
       ? {
           transaction: recoveryTransaction,
-          startedAt: safeNumber(recoveryValue.startedAt, Date.now()),
+          startedAt: recoveryStartedAt,
         }
       : null;
 
@@ -316,7 +368,10 @@ export function sanitizePersistedWalletState(
           RLO: safeNumber(value.balances.RLO, fallback.balances.RLO),
         }
       : fallback.balances,
-    settings: sanitizeSettings(value.settings, fallback.settings),
+    settings: sanitizeSettings(
+      value.settings ?? value.securitySettings,
+      fallback.settings,
+    ),
     protectionState:
       protectionState === "Recovering" && !recovery
         ? "Frozen"
@@ -340,4 +395,45 @@ export function sanitizePersistedWalletState(
       ? (value.activeScenario as DemoScenario)
       : null,
   };
+}
+
+export function sanitizePersistedWalletState(
+  value: unknown,
+): WalletDataState {
+  try {
+    return normalizeWalletState(value);
+  } catch {
+    return createInitialWalletData();
+  }
+}
+
+export function normalizePersistedWalletEnvelope(
+  value: unknown,
+): PersistedWalletEnvelope {
+  try {
+    const state =
+      isRecord(value) && Object.hasOwn(value, "state")
+        ? value.state
+        : value;
+    return {
+      state: sanitizePersistedWalletState(state),
+      version: WALLET_STORAGE_VERSION,
+    };
+  } catch {
+    return {
+      state: createInitialWalletData(),
+      version: WALLET_STORAGE_VERSION,
+    };
+  }
+}
+
+export function parsePersistedWalletEnvelope(
+  raw: string | null,
+): PersistedWalletEnvelope {
+  if (!raw?.trim()) return normalizePersistedWalletEnvelope(null);
+  try {
+    return normalizePersistedWalletEnvelope(JSON.parse(raw));
+  } catch {
+    return normalizePersistedWalletEnvelope(null);
+  }
 }

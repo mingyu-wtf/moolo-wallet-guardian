@@ -11,6 +11,7 @@ import type {
   RialoTraceStatus,
   RialoWorkflowSummary,
 } from "@/types";
+import { useTranslation } from "@/hooks/useTranslation";
 
 const primitiveIcons = {
   "reactive-transaction": Braces,
@@ -38,6 +39,7 @@ const decisionLabels: Record<RialoWorkflowSummary["finalDecision"], string> = {
 };
 
 export function RialoPrimitiveGrid({ compact = false }: { compact?: boolean }) {
+  const { tx } = useTranslation();
   return (
     <div className={`rialo-primitive-grid ${compact ? "is-compact" : ""}`}>
       {(
@@ -56,8 +58,8 @@ export function RialoPrimitiveGrid({ compact = false }: { compact?: boolean }) {
             </span>
             <div>
               <strong>{meta.title}</strong>
-              <p>{meta.description}</p>
-              <small>{meta.simulationLabel}</small>
+              <p>{tx(meta.description)}</p>
+              <small>{tx(meta.simulationLabel)}</small>
             </div>
           </article>
         );
@@ -70,27 +72,50 @@ export function RialoWorkflowPanel({
   workflow,
   open = true,
 }: {
-  workflow: RialoWorkflowSummary;
+  workflow: RialoWorkflowSummary | null | undefined;
   open?: boolean;
 }) {
+  const { t, tx } = useTranslation();
+  if (
+    !workflow ||
+    !Array.isArray(workflow.traces) ||
+    workflow.traces.length === 0
+  ) {
+    return (
+      <div className="rialo-workflow-panel">
+        <div className="rialo-workflow-body">
+          <strong>{t("Workflow data unavailable")}</strong>
+          <p>
+            {t(
+              "The saved demo record was recovered without a usable trace.",
+            )}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <details className="rialo-workflow-panel" open={open}>
       <summary>
         <span>
           <RialoMark size="small" />
-          Simulated Rialo Workflow
+          {t("Simulated Rialo Workflow")}
         </span>
-        <strong>{decisionLabels[workflow.finalDecision]}</strong>
+        <strong>
+          {tx(decisionLabels[workflow.finalDecision] ?? "Review")}
+        </strong>
       </summary>
       <div className="rialo-workflow-body">
         <div className="rialo-workflow-heading">
-          <span>Workflow</span>
-          <strong>{workflow.workflowName}</strong>
-          <p>{workflow.predicateSummary}</p>
+          <span>{t("Workflow")}</span>
+          <strong>{tx(workflow.workflowName)}</strong>
+          <p>{tx(workflow.predicateSummary)}</p>
         </div>
         <ol className="rialo-trace-list">
           {workflow.traces.map((trace) => {
             const meta = RIALO_PRIMITIVE_META[trace.primitive];
+            if (!meta) return null;
             return (
               <li
                 className={`rialo-trace trace-${trace.status}`}
@@ -100,10 +125,10 @@ export function RialoWorkflowPanel({
                 <div>
                   <span className="rialo-trace-title">
                     <strong>{trace.title}</strong>
-                    <i>{statusLabels[trace.status]}</i>
+                    <i>{tx(statusLabels[trace.status] ?? "Unavailable")}</i>
                   </span>
-                  <p>{trace.resultSummary ?? trace.description}</p>
-                  <small>{meta.simulationLabel}</small>
+                  <p>{tx(trace.resultSummary ?? trace.description)}</p>
+                  <small>{tx(meta.simulationLabel)}</small>
                 </div>
               </li>
             );
@@ -119,30 +144,34 @@ export function RialoArchitectureOverview({
 }: {
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="modal-content rialo-architecture-content">
       <div className="rialo-architecture-brand">
         <RialoMark size="large" />
         <div>
-          <span className="eyebrow">Designed for Rialo</span>
-          <h2 id="security-modal-title">Rialo Architecture Simulation</h2>
+          <span className="eyebrow">{t("Designed for Rialo")}</span>
+          <h2 id="security-modal-title">
+            {t("Rialo Architecture Simulation")}
+          </h2>
           <p>
-            Moolo maps wallet protection into reactive decisions, native time
-            conditions, external signals, and private policy results.
+            {t(
+              "Moolo maps wallet protection into reactive decisions, native time conditions, external signals, and private policy results.",
+            )}
           </p>
         </div>
       </div>
       <RialoPrimitiveGrid />
       <div className="rialo-disclaimer">
-        <strong>Rialo Concept Demo</strong>
+        <strong>{t("Rialo Concept Demo")}</strong>
         <p>
-          This is a local front-end architecture simulation. It does not connect
-          to a Rialo SDK or RPC, call validators, submit transactions, or perform
-          confidential execution.
+          {t(
+            "This is a local front-end architecture simulation. It does not connect to a Rialo SDK or RPC, call validators, submit transactions, or perform confidential execution.",
+          )}
         </p>
       </div>
       <button className="primary-button full-button" type="button" onClick={onClose}>
-        Back to Moolo
+        {t("Back to Moolo")}
       </button>
     </div>
   );

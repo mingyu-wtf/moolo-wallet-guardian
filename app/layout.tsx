@@ -24,21 +24,28 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase: new URL(origin),
-    title: "Moolo — Your Friendly Reactive Wallet Guardian",
+    title: "Moolo — 친근한 반응형 지갑 가디언",
     description:
-      "An interactive, simulation-only wallet security experience for the Rialo Builders Hub.",
+      "Rialo Builders Hub를 위한 브라우저 기반 인터랙티브 지갑 보안 시뮬레이션.",
     openGraph: {
-      title: "Moolo — Your Friendly Reactive Wallet Guardian",
+      title: "Moolo — 친근한 반응형 지갑 가디언",
       description:
-        "Watch a reactive wallet guardian inspect, delay, block, and recover simulated transactions.",
+        "반응형 지갑 가디언이 시뮬레이션 거래를 검사하고, 지연하고, 차단하고, 복구하는 과정을 확인하세요.",
       type: "website",
-      images: [{ url: imageUrl, width: 1664, height: 920, alt: "Moolo wallet guardian" }],
+      images: [
+        {
+          url: imageUrl,
+          width: 1664,
+          height: 920,
+          alt: "Moolo 지갑 가디언",
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
-      title: "Moolo — Your Friendly Reactive Wallet Guardian",
+      title: "Moolo — 친근한 반응형 지갑 가디언",
       description:
-        "Interactive wallet security simulation. No real assets or onchain transactions.",
+        "인터랙티브 지갑 보안 시뮬레이션. 실제 자산과 온체인 거래는 사용하지 않습니다.",
       images: [imageUrl],
     },
   };
@@ -50,7 +57,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="ko" data-locale="ko">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
