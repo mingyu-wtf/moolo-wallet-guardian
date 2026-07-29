@@ -9,6 +9,7 @@ import type {
   TokenSymbol,
   TransactionStatus,
 } from "@/types";
+import { generateSimulationId } from "@/lib/random";
 
 export const RIALO_PRIMITIVE_META: Record<
   RialoPrimitive,
@@ -187,7 +188,7 @@ function createTrace(
             : "Simulation step completed.";
 
   return {
-    id: crypto.randomUUID(),
+    id: generateSimulationId(),
     primitive,
     title: meta.title,
     description: meta.description,

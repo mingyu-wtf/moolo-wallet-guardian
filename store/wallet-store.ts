@@ -2,7 +2,17 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
-import { sanitizePersistedWalletState } from "@/lib/persistence";
+import { updateWalletHydrationDiagnostics } from "@/lib/hydration-diagnostics";
+import {
+  clearMooloStoredState,
+  getMooloBrowserStorage,
+} from "@/lib/moolo-storage";
+import {
+  normalizePersistedWalletEnvelope,
+  sanitizePersistedWalletState,
+  WALLET_STORAGE_KEY,
+  WALLET_STORAGE_VERSION,
+} from "@/lib/persistence";
 import {
   beginRecoveryState,
   cancelPendingState,
@@ -21,6 +31,7 @@ import type {
   DemoTransaction,
   SecuritySettings,
 } from "@/types";
+import { resetGuidedDemoState } from "@/store/guided-demo-store";
 
 export type WalletView = WalletDataState["view"];
 
@@ -49,25 +60,57 @@ export type WalletState = WalletDataState & WalletActions;
 
 const safeBrowserStorage: StateStorage = {
   getItem: (name) => {
+    updateWalletHydrationDiagnostics({
+      phase: "reading-storage",
+      storageRead: true,
+    });
+    const storage = getMooloBrowserStorage("local");
+    if (!storage) {
+      updateWalletHydrationDiagnostics({
+        phase: "recovering",
+        recoveryReason: "Local Storage is unavailable",
+      });
+      return null;
+    }
+
     try {
-      const value = localStorage.getItem(name);
-      if (value) JSON.parse(value);
-      return value;
-    } catch {
-      localStorage.removeItem(name);
+      const value = storage.getItem(name);
+      if (!value) return null;
+
+      updateWalletHydrationDiagnostics({ phase: "parsing-storage" });
+      const parsed = JSON.parse(value);
+      updateWalletHydrationDiagnostics({ phase: "normalizing-storage" });
+      const normalized = normalizePersistedWalletEnvelope(parsed);
+      return JSON.stringify(normalized);
+    } catch (error) {
+      updateWalletHydrationDiagnostics({
+        phase: "recovering",
+        storageParseFailed: true,
+        recoveryReason:
+          error instanceof Error ? error.message : "Storage parsing failed",
+      });
+      try {
+        storage.removeItem(name);
+      } catch {
+        // A blocked storage area is treated like unavailable persistence.
+      }
       return null;
     }
   },
   setItem: (name, value) => {
+    const storage = getMooloBrowserStorage("local");
+    if (!storage) return;
     try {
-      localStorage.setItem(name, value);
+      storage.setItem(name, value);
     } catch {
       // The demo remains usable in memory when storage is unavailable.
     }
   },
   removeItem: (name) => {
+    const storage = getMooloBrowserStorage("local");
+    if (!storage) return;
     try {
-      localStorage.removeItem(name);
+      storage.removeItem(name);
     } catch {
       // Nothing else is required for an in-memory reset.
     }
@@ -125,18 +168,30 @@ export const useWalletStore = create<WalletState>()(
         set((state) => beginRecoveryState(state, transaction, Date.now())),
       completeRecovery: () =>
         set((state) => completeRecoveryState(state)),
-      resetDemo: () => {
-        safeBrowserStorage.removeItem("moolo-wallet");
-        set({ ...createInitialWalletData(), hasHydrated: true });
-      },
+      resetDemo: () => resetMooloDemoState(),
     }),
     {
-      name: "moolo-wallet",
-      version: 3,
+      name: WALLET_STORAGE_KEY,
+      version: WALLET_STORAGE_VERSION,
       storage: createJSONStorage(() => safeBrowserStorage),
       skipHydration: true,
-      migrate: (persistedState) =>
-        sanitizePersistedWalletState(persistedState),
+      migrate: (persistedState) => {
+        updateWalletHydrationDiagnostics({
+          phase: "migrating",
+          migrationStarted: true,
+        });
+        try {
+          return sanitizePersistedWalletState(persistedState);
+        } catch (error) {
+          updateWalletHydrationDiagnostics({
+            phase: "recovering",
+            migrationFailed: true,
+            recoveryReason:
+              error instanceof Error ? error.message : "Migration failed",
+          });
+          return createInitialWalletData();
+        }
+      },
       partialize: (state) => ({
         screen: state.screen,
         view: state.view,
@@ -150,11 +205,100 @@ export const useWalletStore = create<WalletState>()(
         settledTransactionIds: state.settledTransactionIds,
         activeScenario: state.activeScenario,
       }),
-      merge: (persisted, current) => ({
-        ...current,
-        ...sanitizePersistedWalletState(persisted),
-      }),
-      onRehydrateStorage: () => (state) => state?.setHydrated(true),
+      merge: (persisted, current) => {
+        updateWalletHydrationDiagnostics({
+          phase: "merging",
+          mergeStarted: true,
+        });
+        return {
+          ...current,
+          ...sanitizePersistedWalletState(persisted),
+        };
+      },
+      onRehydrateStorage: () => (state, error) => {
+        if (error || !state) {
+          updateWalletHydrationDiagnostics({
+            phase: "recovering",
+            recoveryReason:
+              error instanceof Error ? error.message : "Hydration failed",
+          });
+          recoverWalletStore("Hydration callback failed");
+          return;
+        }
+
+        state.setHydrated(true);
+        updateWalletHydrationDiagnostics({
+          phase: "hydrated",
+          hasHydrated: true,
+        });
+      },
     },
   ),
 );
+
+function recoverWalletStore(reason: string): void {
+  updateWalletHydrationDiagnostics({
+    phase: "recovering",
+    recoveryReason: reason,
+  });
+  safeBrowserStorage.removeItem(WALLET_STORAGE_KEY);
+  useWalletStore.setState({
+    ...createInitialWalletData(),
+    hasHydrated: true,
+  });
+}
+
+export async function hydrateWalletStore(): Promise<void> {
+  updateWalletHydrationDiagnostics({
+    phase: "rehydrating",
+    hasHydrated: false,
+    storageRead: false,
+    storageParseFailed: false,
+    migrationStarted: false,
+    migrationFailed: false,
+    mergeStarted: false,
+    recoveryReason: null,
+  });
+  try {
+    await useWalletStore.persist.rehydrate();
+  } catch (error) {
+    updateWalletHydrationDiagnostics({
+      phase: "recovering",
+      recoveryReason:
+        error instanceof Error ? error.message : "Hydration threw",
+    });
+    recoverWalletStore(
+      error instanceof Error ? error.message : "Hydration threw",
+    );
+  }
+
+  if (!useWalletStore.getState().hasHydrated) {
+    useWalletStore.setState({ hasHydrated: true });
+  }
+
+  updateWalletHydrationDiagnostics({
+    phase: "hydrated",
+    hasHydrated: true,
+  });
+}
+
+export function forceWalletHydrationFallback(reason: string): void {
+  if (useWalletStore.getState().hasHydrated) return;
+  recoverWalletStore(reason);
+}
+
+export function resetMooloDemoState(): void {
+  resetGuidedDemoState();
+  clearMooloStoredState();
+  useWalletStore.setState({
+    ...createInitialWalletData(),
+    hasHydrated: true,
+  });
+  useWalletStore.persist.clearStorage();
+  safeBrowserStorage.removeItem(WALLET_STORAGE_KEY);
+  updateWalletHydrationDiagnostics({
+    phase: "hydrated",
+    hasHydrated: true,
+    recoveryReason: "Demo reset",
+  });
+}

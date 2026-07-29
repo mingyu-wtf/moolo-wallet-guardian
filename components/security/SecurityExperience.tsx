@@ -31,12 +31,11 @@ import { ADDRESSES, SECURITY_STEPS, TOKEN_PRICES } from "@/lib/constants";
 import { transitionRialoWorkflow } from "@/lib/rialo";
 import {
   createDemoTransaction,
-  formatCurrency,
-  formatDateTime,
   shortAddress,
 } from "@/lib/simulation";
 import { useWalletStore } from "@/store/wallet-store";
 import type { DemoTransaction, RiskAssessment } from "@/types";
+import { useTranslation } from "@/hooks/useTranslation";
 
 export type SecurityExperienceState =
   | {
@@ -83,13 +82,17 @@ function RiskMeter({
   score: number;
   level: RiskAssessment["level"];
 }) {
+  const { t } = useTranslation();
   return (
     <div className="risk-meter">
       <div className="risk-meter-heading">
-        <span>Risk score</span>
+        <span>{t("Risk score")}</span>
         <strong>{score}/100</strong>
       </div>
-      <div className="risk-track" aria-label={`Risk score ${score} out of 100`}>
+      <div
+        className="risk-track"
+        aria-label={`${t("Risk score")} ${score} / 100`}
+      >
         <motion.span
           className={`risk-fill risk-${level.toLowerCase()}`}
           initial={{ width: 0 }}
@@ -107,6 +110,7 @@ export function SecurityExperience({
   onClose,
   onChange,
 }: SecurityExperienceProps) {
+  const { t } = useTranslation();
   const dialogRef = useRef<HTMLDivElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
 
@@ -117,6 +121,12 @@ export function SecurityExperience({
         : null;
     return () => returnFocusRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (dialogRef.current) {
+      dialogRef.current.scrollTop = 0;
+    }
+  }, [experience.kind]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -159,7 +169,7 @@ export function SecurityExperience({
           className="icon-button modal-close"
           type="button"
           onClick={onClose}
-          aria-label="Close dialog"
+          aria-label={t("Close dialog")}
         >
           <X size={19} />
         </button>
@@ -223,6 +233,7 @@ function AnalysisExperience({
   onClose: () => void;
   onChange: (experience: SecurityExperienceState) => void;
 }) {
+  const { t, tx, formatNumber } = useTranslation();
   const [completedSteps, setCompletedSteps] = useState(0);
   const [actionPending, setActionPending] = useState(false);
   const [actionError, setActionError] = useState("");
@@ -294,11 +305,17 @@ function AnalysisExperience({
     return (
       <div className="modal-content analysis-progress" aria-live="polite">
         <div className="modal-mascot">
-          <MooloMascot state="guard" size="large" />
+          <MooloMascot state="scanning" size="large" />
         </div>
-        <span className="eyebrow">Reactive protection in progress</span>
-        <h2 id="security-modal-title">Security Check</h2>
-        <p>Moolo is reviewing this simulated transaction before it can move.</p>
+        <span className="eyebrow">
+          {tx("Reactive protection in progress")}
+        </span>
+        <h2 id="security-modal-title">{tx("Security Check")}</h2>
+        <p>
+          {tx(
+            "Moolo is reviewing this simulated transaction before it can move.",
+          )}
+        </p>
         <div className="security-step-list">
           {SECURITY_STEPS.map((step, index) => {
             const done = index < completedSteps;
@@ -309,8 +326,8 @@ function AnalysisExperience({
                 key={step}
               >
                 <span>{done ? <Check size={15} /> : index + 1}</span>
-                <strong>{step}</strong>
-                {active && <i>Checking…</i>}
+                <strong>{tx(step)}</strong>
+                {active && <i>{tx("Checking…")}</i>}
               </div>
             );
           })}
@@ -330,20 +347,26 @@ function AnalysisExperience({
           state={isSafe ? "safe" : isBlocked ? "guard" : "alert"}
           size="large"
         />
-        <span className="eyebrow">Analysis complete</span>
+        <span className="eyebrow">{tx("Analysis complete")}</span>
         <h2 id="security-modal-title">
           {isSafe
-            ? "Transfer confirmed"
+            ? tx("Transfer confirmed")
             : isBlocked
-              ? "Transaction blocked"
-              : "Moolo stepped in"}
+              ? tx("Transaction blocked")
+              : tx("Moolo stepped in")}
         </h2>
         <p>
           {isSafe
-            ? "No concerning signals were found. Your demo balance has been updated."
+            ? tx(
+                "No concerning signals were found. Your demo balance has been updated.",
+              )
             : isBlocked
-              ? "This recipient is known to be malicious. Your demo funds remain untouched."
-              : "This transfer needs a security delay or guardian review before it can continue."}
+              ? tx(
+                  "This recipient is known to be malicious. Your demo funds remain untouched.",
+                )
+              : tx(
+                  "This transfer needs a security delay or guardian review before it can continue.",
+                )}
         </p>
       </div>
       <RiskMeter score={assessment.score} level={assessment.level} />
@@ -355,26 +378,32 @@ function AnalysisExperience({
             ) : (
               <ShieldCheck size={15} aria-hidden="true" />
             )}
-            <span>{reason}</span>
+            <span>{tx(reason)}</span>
           </div>
         ))}
       </div>
       <div className="transaction-summary compact-summary">
-        <DetailRow label="Amount">
-          {transaction.amount.toLocaleString()} {transaction.token}
+        <DetailRow label={t("Amount")}>
+          {formatNumber(transaction.amount)} {transaction.token}
         </DetailRow>
-        <DetailRow label="Recipient">{shortAddress(transaction.to)}</DetailRow>
+        <DetailRow label={t("Recipient")}>
+          {shortAddress(transaction.to)}
+        </DetailRow>
         {isSafe && (
-          <DetailRow label="Network fee">{transaction.fee} ETH</DetailRow>
+          <DetailRow label={t("Network fee")}>
+            {transaction.fee} ETH
+          </DetailRow>
         )}
-        {isBlocked && <DetailRow label="Previous reports">128</DetailRow>}
+        {isBlocked && (
+          <DetailRow label={tx("Previous reports")}>128</DetailRow>
+        )}
       </div>
       <RialoWorkflowPanel workflow={transaction.rialoWorkflow} />
       {assessment.decision === "timelock" ? (
         <div className="modal-action-stack">
           {actionError && (
             <p className="field-error" role="alert">
-              {actionError}
+              {tx(actionError)}
             </p>
           )}
           <button
@@ -383,7 +412,7 @@ function AnalysisExperience({
             disabled={actionPending}
           >
             <Clock3 size={17} aria-hidden="true" />
-            Start Security Delay
+            {tx("Start Security Delay")}
           </button>
           <button
             className="secondary-button full-button"
@@ -391,7 +420,7 @@ function AnalysisExperience({
             disabled={actionPending}
           >
             <UserRoundCheck size={17} aria-hidden="true" />
-            Request Guardian Approval
+            {tx("Request Guardian Approval")}
           </button>
           <button
             className="text-button"
@@ -401,7 +430,7 @@ function AnalysisExperience({
             }}
             disabled={actionPending}
           >
-            Cancel Transfer
+            {t("Cancel Transfer")}
           </button>
         </div>
       ) : assessment.decision === "review" ? (
@@ -417,15 +446,15 @@ function AnalysisExperience({
             disabled={actionPending}
           >
             <BadgeCheck size={17} aria-hidden="true" />
-            Confirm After Review
+            {tx("Confirm After Review")}
           </button>
           <button className="text-button" onClick={onClose}>
-            Cancel Transfer
+            {t("Cancel Transfer")}
           </button>
         </div>
       ) : (
         <button className="primary-button full-button" onClick={onClose}>
-          {isSafe ? "Back to Wallet" : "Return Safely"}
+          {isSafe ? tx("Back to Wallet") : tx("Return Safely")}
           <ChevronRight size={17} aria-hidden="true" />
         </button>
       )}
@@ -441,6 +470,7 @@ function TimeLockExperience({
   onClose: () => void;
   onChange: (experience: SecurityExperienceState) => void;
 }) {
+  const { t, tx, formatNumber, formatTime } = useTranslation();
   const pending = useWalletStore((state) => state.pendingTransfer);
   const activity = useWalletStore((state) => state.activity);
   const cancelPending = useWalletStore((state) => state.cancelPending);
@@ -477,15 +507,15 @@ function TimeLockExperience({
     return (
       <div className="modal-content centered-result">
         <MooloMascot state="safe" size="large" />
-        <span className="eyebrow">Security delay complete</span>
-        <h2 id="security-modal-title">Transfer confirmed</h2>
-        <p>The simulated amount has now been deducted from the wallet.</p>
+        <span className="eyebrow">{tx("Security delay complete")}</span>
+        <h2 id="security-modal-title">{tx("Transfer confirmed")}</h2>
+        <p>{tx("The simulated amount has now been deducted from the wallet.")}</p>
         <RialoWorkflowPanel
           workflow={completedTransaction.rialoWorkflow}
           open={false}
         />
         <button className="primary-button full-button" onClick={onClose}>
-          Back to Wallet
+          {tx("Back to Wallet")}
         </button>
         <SimulationNotice compact />
       </div>
@@ -496,10 +526,14 @@ function TimeLockExperience({
     return (
       <div className="modal-content centered-result">
         <MooloMascot state="waiting" size="large" />
-        <h2 id="security-modal-title">No transfer is waiting</h2>
-        <p>Launch the Large Transfer scenario to create a security delay.</p>
+        <h2 id="security-modal-title">{tx("No transfer is waiting")}</h2>
+        <p>
+          {tx(
+            "Launch the Large Transfer scenario to create a security delay.",
+          )}
+        </p>
         <button className="primary-button full-button" onClick={onClose}>
-          Back to Wallet
+          {tx("Back to Wallet")}
         </button>
       </div>
     );
@@ -524,45 +558,42 @@ function TimeLockExperience({
       <div className="modal-mascot">
         <MooloMascot state="waiting" size="large" />
       </div>
-      <span className="eyebrow">Native timer protection</span>
-      <h2 id="security-modal-title">Security delay active</h2>
+      <span className="eyebrow">{tx("Native timer protection")}</span>
+      <h2 id="security-modal-title">{tx("Security delay active")}</h2>
       <p>
-        Moolo is holding this high-risk transfer so there is time to react.
+        {tx(
+          "Moolo is holding this high-risk transfer so there is time to react.",
+        )}
       </p>
       <div className="countdown-ring">
         <span>{remaining}</span>
-        <small>seconds</small>
+        <small>{tx("seconds")}</small>
         <i style={{ "--progress": `${progress * 3.6}deg` } as React.CSSProperties} />
       </div>
       <div className="transaction-summary">
-        <DetailRow label="Amount">
-          {pending.transaction.amount.toLocaleString()}{" "}
+        <DetailRow label={t("Amount")}>
+          {formatNumber(pending.transaction.amount)}{" "}
           {pending.transaction.token}
         </DetailRow>
-        <DetailRow label="Recipient">
+        <DetailRow label={t("Recipient")}>
           {shortAddress(pending.transaction.to)}
         </DetailRow>
-        <DetailRow label="Started">
-          {new Date(
-            pending.startedAt,
-          ).toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+        <DetailRow label={tx("Started")}>
+          {formatTime(pending.startedAt)}
         </DetailRow>
       </div>
       <div className="reason-list">
         {pending.transaction.reasons.map((reason) => (
           <div key={reason}>
             <ShieldAlert size={15} aria-hidden="true" />
-            <span>{reason}</span>
+            <span>{tx(reason)}</span>
           </div>
         ))}
       </div>
       <RialoWorkflowPanel workflow={pending.transaction.rialoWorkflow} />
       <button className="primary-button full-button" onClick={requestGuardian}>
         <UserRoundCheck size={17} aria-hidden="true" />
-        Request Guardian
+        {tx("Request Guardian")}
       </button>
       <button
         className="danger-button full-button"
@@ -571,7 +602,7 @@ function TimeLockExperience({
           onClose();
         }}
       >
-        Cancel Transfer
+        {t("Cancel Transfer")}
       </button>
       <SimulationNotice compact />
     </div>
@@ -579,6 +610,7 @@ function TimeLockExperience({
 }
 
 function GuardianExperience({ onClose }: { onClose: () => void }) {
+  const { t, tx, formatNumber } = useTranslation();
   const pending = useWalletStore((state) => state.pendingTransfer);
   const activity = useWalletStore((state) => state.activity);
   const approvePending = useWalletStore((state) => state.approvePending);
@@ -597,14 +629,16 @@ function GuardianExperience({ onClose }: { onClose: () => void }) {
           state={result === "approved" ? "safe" : "alert"}
           size="large"
         />
-        <span className="eyebrow">Guardian decision recorded</span>
+        <span className="eyebrow">{tx("Guardian decision recorded")}</span>
         <h2 id="security-modal-title">
-          {result === "approved" ? "Transfer approved" : "Transfer rejected"}
+          {result === "approved"
+            ? tx("Transfer approved")
+            : tx("Transfer rejected")}
         </h2>
         <p>
           {result === "approved"
-            ? "The simulated balance and activity have been updated."
-            : "The transfer was cancelled. No demo funds moved."}
+            ? tx("The simulated balance and activity have been updated.")
+            : tx("The transfer was cancelled. No demo funds moved.")}
         </p>
         {trackedTransaction && (
           <RialoWorkflowPanel
@@ -618,7 +652,7 @@ function GuardianExperience({ onClose }: { onClose: () => void }) {
           />
         )}
         <button className="primary-button full-button" onClick={onClose}>
-          Back to Wallet
+          {tx("Back to Wallet")}
         </button>
         <SimulationNotice compact />
       </div>
@@ -629,10 +663,14 @@ function GuardianExperience({ onClose }: { onClose: () => void }) {
     return (
       <div className="modal-content centered-result">
         <MooloMascot state="waiting" size="large" />
-        <h2 id="security-modal-title">No guardian request yet</h2>
-        <p>Start a large transfer first, then ask a guardian to review it.</p>
+        <h2 id="security-modal-title">{tx("No guardian request yet")}</h2>
+        <p>
+          {tx(
+            "Start a large transfer first, then ask a guardian to review it.",
+          )}
+        </p>
         <button className="primary-button full-button" onClick={onClose}>
-          Back to Wallet
+          {tx("Back to Wallet")}
         </button>
       </div>
     );
@@ -643,21 +681,25 @@ function GuardianExperience({ onClose }: { onClose: () => void }) {
       <div className="guardian-avatar">
         <UserRoundCheck size={26} aria-hidden="true" />
       </div>
-      <span className="eyebrow">Guardian approval</span>
-      <h2 id="security-modal-title">A transfer needs your review</h2>
+      <span className="eyebrow">{t("Guardian approval")}</span>
+      <h2 id="security-modal-title">{tx("A transfer needs your review")}</h2>
       <p>
-        You are acting as the designated guardian in this browser-only demo.
+        {tx(
+          "You are acting as the designated guardian in this browser-only demo.",
+        )}
       </p>
       <div className="transaction-summary">
-        <DetailRow label="Guardian">
+        <DetailRow label={tx("Guardian")}>
           {shortAddress(ADDRESSES.guardian)}
         </DetailRow>
-        <DetailRow label="Amount">
-          {pending.transaction.amount.toLocaleString()}{" "}
+        <DetailRow label={t("Amount")}>
+          {formatNumber(pending.transaction.amount)}{" "}
           {pending.transaction.token}
         </DetailRow>
-        <DetailRow label="To">{shortAddress(pending.transaction.to)}</DetailRow>
-        <DetailRow label="Risk">
+        <DetailRow label={tx("To")}>
+          {shortAddress(pending.transaction.to)}
+        </DetailRow>
+        <DetailRow label={t("Risk")}>
           <StatusBadge value={pending.transaction.riskLevel} />
         </DetailRow>
       </div>
@@ -665,7 +707,7 @@ function GuardianExperience({ onClose }: { onClose: () => void }) {
         {pending.transaction.reasons.map((reason) => (
           <div key={reason}>
             <ShieldAlert size={15} aria-hidden="true" />
-            <span>{reason}</span>
+            <span>{tx(reason)}</span>
           </div>
         ))}
       </div>
@@ -681,7 +723,7 @@ function GuardianExperience({ onClose }: { onClose: () => void }) {
         disabled={submitting}
       >
         <BadgeCheck size={17} aria-hidden="true" />
-        Approve as Guardian
+        {tx("Approve as Guardian")}
       </button>
       <button
         className="danger-button full-button"
@@ -693,7 +735,7 @@ function GuardianExperience({ onClose }: { onClose: () => void }) {
         }}
         disabled={submitting}
       >
-        Reject Transfer
+        {tx("Reject Transfer")}
       </button>
       <SimulationNotice compact />
     </div>
@@ -707,41 +749,43 @@ function ContractExperience({
   transaction: DemoTransaction;
   onClose: () => void;
 }) {
+  const { t, tx } = useTranslation();
   return (
     <div className="modal-content contract-content">
       <div className="warning-icon">
         <FileWarning size={28} aria-hidden="true" />
       </div>
-      <span className="eyebrow">Contract analysis</span>
-      <h2 id="security-modal-title">Unknown contract blocked</h2>
+      <span className="eyebrow">{tx("Contract analysis")}</span>
+      <h2 id="security-modal-title">{tx("Unknown contract blocked")}</h2>
       <p>
-        This unverified contract asks for an unlimited token permission. Moolo
-        stopped the interaction.
+        {tx(
+          "This unverified contract asks for an unlimited token permission. Moolo stopped the interaction.",
+        )}
       </p>
       <RiskMeter score={transaction.riskScore} level={transaction.riskLevel} />
       <div className="transaction-summary">
-        <DetailRow label="Contract">
+        <DetailRow label={tx("Contract")}>
           {shortAddress(ADDRESSES.contract)}
         </DetailRow>
-        <DetailRow label="Verification">
+        <DetailRow label={tx("Verification")}>
           <StatusBadge value="Unverified" />
         </DetailRow>
-        <DetailRow label="Permission">Unlimited USDC</DetailRow>
-        <DetailRow label="Decision">Block Interaction</DetailRow>
+        <DetailRow label={tx("Permission")}>{tx("Unlimited USDC")}</DetailRow>
+        <DetailRow label={tx("Decision")}>{tx("Block Interaction")}</DetailRow>
       </div>
       <div className="reason-list">
         <div>
           <Ban size={15} aria-hidden="true" />
-          <span>Suspicious approval pattern</span>
+          <span>{tx("Suspicious approval pattern")}</span>
         </div>
         <div>
           <Ban size={15} aria-hidden="true" />
-          <span>Unlimited token permission</span>
+          <span>{tx("Unlimited token permission")}</span>
         </div>
       </div>
       <RialoWorkflowPanel workflow={transaction.rialoWorkflow} />
       <button className="primary-button full-button" onClick={onClose}>
-        Return to Wallet
+        {t("Return to Wallet")}
       </button>
       <SimulationNotice compact />
     </div>
@@ -755,6 +799,7 @@ function AgentExperience({
   transaction: DemoTransaction;
   onClose: () => void;
 }) {
+  const { t, tx, formatNumber } = useTranslation();
   const dailyLimit = useWalletStore(
     (state) => state.settings.aiAgentDailyLimit,
   );
@@ -763,30 +808,32 @@ function AgentExperience({
       <div className="agent-mark">
         <Bot size={26} aria-hidden="true" />
       </div>
-      <span className="eyebrow">AI agent permission</span>
-      <h2 id="security-modal-title">Permission denied</h2>
+      <span className="eyebrow">{tx("AI agent permission")}</span>
+      <h2 id="security-modal-title">{tx("Permission denied")}</h2>
       <p>
-        Moolo Assistant Agent requested more than its daily spending allowance.
+        {tx(
+          "Moolo Assistant Agent requested more than its daily spending allowance.",
+        )}
       </p>
       <RiskMeter score={transaction.riskScore} level={transaction.riskLevel} />
       <div className="limit-comparison">
         <div>
-          <span>Requested</span>
+          <span>{tx("Requested")}</span>
           <strong>50 USDC</strong>
         </div>
         <ChevronRight size={18} aria-hidden="true" />
         <div>
-          <span>Daily limit</span>
-          <strong>{dailyLimit.toLocaleString()} USDC</strong>
+          <span>{tx("Daily limit")}</span>
+          <strong>{formatNumber(dailyLimit)} USDC</strong>
         </div>
       </div>
       <div className="decision-banner decision-denied">
         <Ban size={17} aria-hidden="true" />
-        Demo funds untouched
+        {tx("Demo funds untouched")}
       </div>
       <RialoWorkflowPanel workflow={transaction.rialoWorkflow} />
       <button className="primary-button full-button" onClick={onClose}>
-        Return to Wallet
+        {t("Return to Wallet")}
       </button>
       <SimulationNotice compact />
     </div>
@@ -802,6 +849,7 @@ function FrozenExperience({
   onClose: () => void;
   onChange: (experience: SecurityExperienceState) => void;
 }) {
+  const { t, tx } = useTranslation();
   const protectionState = useWalletStore((state) => state.protectionState);
   const walletAddress = useWalletStore((state) => state.walletAddress);
   const recovery = useWalletStore((state) => state.recovery);
@@ -858,18 +906,22 @@ function FrozenExperience({
       <div className="modal-content recovery-content" aria-live="polite">
         <div className="modal-mascot">
           <MooloMascot
-            state={recoveryFinished ? "safe" : "waiting"}
+            state={recoveryFinished ? "recovered" : "waiting"}
             size="large"
           />
         </div>
-        <span className="eyebrow">Guided recovery</span>
+        <span className="eyebrow">{tx("Guided recovery")}</span>
         <h2 id="security-modal-title">
-          {recoveryFinished ? "Recovery complete" : "Securing your wallet"}
+          {recoveryFinished
+            ? tx("Recovery complete")
+            : tx("Securing your wallet")}
         </h2>
         <p>
           {recoveryFinished
-            ? "A fresh demo wallet is protected. Simulated balances are preserved so the presentation can continue."
-            : "Moolo is coordinating a simulated guardian recovery."}
+            ? tx(
+                "A fresh demo wallet is protected. Simulated balances are preserved so the presentation can continue.",
+              )
+            : tx("Moolo is coordinating a simulated guardian recovery.")}
         </p>
         <div className="security-step-list">
           {recoverySteps.map((label, index) => (
@@ -878,7 +930,7 @@ function FrozenExperience({
               key={label}
             >
               <span>{index < step ? <Check size={15} /> : index + 1}</span>
-              <strong>{label}</strong>
+              <strong>{tx(label)}</strong>
             </div>
           ))}
         </div>
@@ -892,12 +944,12 @@ function FrozenExperience({
         {recoveryFinished && (
           <>
             <div className="new-wallet-box">
-              <span>New demo wallet</span>
+              <span>{tx("New demo wallet")}</span>
               <strong>{shortAddress(ADDRESSES.recovered)}</strong>
               <StatusBadge value="Protected" />
             </div>
             <button className="primary-button full-button" onClick={onClose}>
-              Open Recovered Wallet
+              {tx("Open Recovered Wallet")}
             </button>
           </>
         )}
@@ -911,24 +963,25 @@ function FrozenExperience({
       <div className="frozen-mark">
         <LockKeyhole size={28} aria-hidden="true" />
       </div>
-      <span className="eyebrow">Emergency protection</span>
-      <h2 id="security-modal-title">Wallet frozen</h2>
+      <span className="eyebrow">{tx("Emergency protection")}</span>
+      <h2 id="security-modal-title">{t("Wallet frozen")}</h2>
       <p>
-        Abnormal behavior was detected. Send is disabled and the guardian has
-        been notified in this simulation.
+        {tx(
+          "Abnormal behavior was detected. Send is disabled and the guardian has been notified in this simulation.",
+        )}
       </p>
       <div className="freeze-status-list">
         <div>
           <Ban size={16} aria-hidden="true" />
-          All outgoing transfers paused
+          {tx("All outgoing transfers paused")}
         </div>
         <div>
           <UserRoundCheck size={16} aria-hidden="true" />
-          Guardian notified
+          {tx("Guardian notified")}
         </div>
         <div>
           <Shield size={16} aria-hidden="true" />
-          Demo balance secured
+          {tx("Demo balance secured")}
         </div>
       </div>
       <RialoWorkflowPanel workflow={transaction.rialoWorkflow} />
@@ -958,13 +1011,13 @@ function FrozenExperience({
         }}
       >
         <RotateCcw size={17} aria-hidden="true" />
-        Start Recovery
+        {tx("Start Recovery")}
       </button>
       <button
         className="secondary-button full-button"
         onClick={() => onChange({ kind: "reset-confirm" })}
       >
-        Reset Demo
+        {t("Reset Demo")}
       </button>
       <SimulationNotice compact />
     </div>
@@ -978,6 +1031,13 @@ function ActivityExperience({
   transaction: DemoTransaction;
   onClose: () => void;
 }) {
+  const {
+    t,
+    tx,
+    formatCurrency,
+    formatDateTime,
+    formatNumber,
+  } = useTranslation();
   const usdValue = transaction.amount * TOKEN_PRICES[transaction.token];
   const [copied, setCopied] = useState(false);
   return (
@@ -987,6 +1047,8 @@ function ActivityExperience({
           state={
             transaction.status === "Confirmed"
               ? "safe"
+              : transaction.status === "Recovered"
+                ? "recovered"
               : transaction.status === "Frozen"
                 ? "frozen"
                 : "alert"
@@ -994,50 +1056,58 @@ function ActivityExperience({
           size="large"
         />
       </div>
-      <span className="eyebrow">Activity details</span>
-      <h2 id="security-modal-title">{transaction.type}</h2>
+      <span className="eyebrow">{tx("Activity details")}</span>
+      <h2 id="security-modal-title">{tx(transaction.type)}</h2>
       <StatusBadge value={transaction.status} />
       <div className="transaction-summary">
-        <DetailRow label="Type">{transaction.type}</DetailRow>
-        <DetailRow label="Status">
+        <DetailRow label={tx("Type")}>{tx(transaction.type)}</DetailRow>
+        <DetailRow label={tx("Status")}>
           <StatusBadge value={transaction.status} />
         </DetailRow>
-        <DetailRow label="Amount">
-          {transaction.amount.toLocaleString()} {transaction.token}
+        <DetailRow label={t("Amount")}>
+          {formatNumber(transaction.amount)} {transaction.token}
         </DetailRow>
-        <DetailRow label="USD value">{formatCurrency(usdValue)}</DetailRow>
-        <DetailRow label="From">{shortAddress(transaction.from)}</DetailRow>
-        <DetailRow label="To">{shortAddress(transaction.to)}</DetailRow>
-        <DetailRow label="Risk score">{transaction.riskScore}/100</DetailRow>
-        <DetailRow label="Created">
+        <DetailRow label={tx("USD value")}>
+          {formatCurrency(usdValue)}
+        </DetailRow>
+        <DetailRow label={tx("From")}>
+          {shortAddress(transaction.from)}
+        </DetailRow>
+        <DetailRow label={tx("To")}>{shortAddress(transaction.to)}</DetailRow>
+        <DetailRow label={t("Risk score")}>
+          {transaction.riskScore}/100
+        </DetailRow>
+        <DetailRow label={tx("Created")}>
           {formatDateTime(transaction.createdAt)}
         </DetailRow>
-        <DetailRow label="Demo block">
-          #{transaction.blockNumber.toLocaleString()}
+        <DetailRow label={tx("Demo block")}>
+          #{formatNumber(transaction.blockNumber)}
         </DetailRow>
-        <DetailRow label="Network fee">{transaction.fee} ETH</DetailRow>
+        <DetailRow label={t("Network fee")}>
+          {transaction.fee} ETH
+        </DetailRow>
       </div>
       <section className="activity-policy-detail">
-        <strong>Risk reasons</strong>
+        <strong>{tx("Risk reasons")}</strong>
         <ul>
           {transaction.reasons.map((reason) => (
-            <li key={reason}>{reason}</li>
+            <li key={reason}>{tx(reason)}</li>
           ))}
         </ul>
-        <strong>Applied policies</strong>
+        <strong>{tx("Applied policies")}</strong>
         <ul>
           {transaction.policies.map((policy) => (
-            <li key={policy}>{policy}</li>
+            <li key={policy}>{tx(policy)}</li>
           ))}
         </ul>
       </section>
       <RialoWorkflowPanel workflow={transaction.rialoWorkflow} />
       <div className="hash-box">
-        <span>Simulated transaction hash</span>
+        <span>{tx("Simulated transaction hash")}</span>
         <code>{transaction.hash}</code>
         <button
           type="button"
-          aria-label="Copy simulated transaction hash"
+          aria-label={tx("Copy simulated transaction hash")}
           onClick={() => {
             void navigator.clipboard.writeText(transaction.hash);
             setCopied(true);
@@ -1047,10 +1117,10 @@ function ActivityExperience({
         </button>
       </div>
       <div className="sr-only" aria-live="polite">
-        {copied ? "Simulated transaction hash copied." : ""}
+        {copied ? tx("Simulated transaction hash copied.") : ""}
       </div>
       <button className="primary-button full-button" onClick={onClose}>
-        Close Details
+        {tx("Close Details")}
       </button>
       <SimulationNotice compact />
     </div>
@@ -1058,6 +1128,7 @@ function ActivityExperience({
 }
 
 function ResetExperience({ onClose }: { onClose: () => void }) {
+  const { t, tx } = useTranslation();
   const resetDemo = useWalletStore((state) => state.resetDemo);
   const [resetting, setResetting] = useState(false);
 
@@ -1066,11 +1137,12 @@ function ResetExperience({ onClose }: { onClose: () => void }) {
       <div className="warning-icon">
         <RotateCcw size={27} aria-hidden="true" />
       </div>
-      <span className="eyebrow">Reset local simulation</span>
-      <h2 id="security-modal-title">Reset the entire demo?</h2>
+      <span className="eyebrow">{tx("Reset local simulation")}</span>
+      <h2 id="security-modal-title">{tx("Reset the entire demo?")}</h2>
       <p>
-        Balances, settings, pending timers, recovery state, activity, and the
-        saved browser state will return to their presentation defaults.
+        {tx(
+          "Balances, settings, pending timers, recovery state, activity, and the saved browser state will return to their presentation defaults.",
+        )}
       </p>
       <button
         className="danger-button full-button"
@@ -1083,7 +1155,7 @@ function ResetExperience({ onClose }: { onClose: () => void }) {
           onClose();
         }}
       >
-        Reset Demo
+        {t("Reset Demo")}
       </button>
       <button
         className="secondary-button full-button"
@@ -1091,7 +1163,7 @@ function ResetExperience({ onClose }: { onClose: () => void }) {
         disabled={resetting}
         onClick={onClose}
       >
-        Keep Current State
+        {tx("Keep Current State")}
       </button>
       <SimulationNotice compact />
     </div>
@@ -1099,18 +1171,21 @@ function ResetExperience({ onClose }: { onClose: () => void }) {
 }
 
 function ReceiveExperience({ onClose }: { onClose: () => void }) {
+  const { tx } = useTranslation();
   const address = useWalletStore((state) => state.walletAddress);
   const [copied, setCopied] = useState(false);
   return (
     <div className="modal-content centered-result">
-      <div className="receive-qr" aria-label="Decorative demo QR code">
+      <div className="receive-qr" aria-label={tx("Decorative demo QR code")}>
         {Array.from({ length: 25 }, (_, index) => (
           <i key={index} className={index % 3 === 0 || index % 7 === 0 ? "on" : ""} />
         ))}
       </div>
-      <span className="eyebrow">Receive demo assets</span>
-      <h2 id="security-modal-title">Your demo address</h2>
-      <p>This modal is visual only. It cannot receive real tokens.</p>
+      <span className="eyebrow">{tx("Receive demo assets")}</span>
+      <h2 id="security-modal-title">{tx("Your demo address")}</h2>
+      <p>
+        {tx("This modal is visual only. It cannot receive real tokens.")}
+      </p>
       <div className="hash-box receive-address">
         <code>{address}</code>
       </div>
@@ -1122,10 +1197,10 @@ function ReceiveExperience({ onClose }: { onClose: () => void }) {
         }}
       >
         <Copy size={16} aria-hidden="true" />
-        {copied ? "Address copied" : "Copy demo address"}
+        {copied ? tx("Address copied") : tx("Copy demo address")}
       </button>
       <button className="text-button" onClick={onClose}>
-        Close
+        {tx("Close")}
       </button>
       <SimulationNotice compact />
     </div>
@@ -1133,20 +1208,22 @@ function ReceiveExperience({ onClose }: { onClose: () => void }) {
 }
 
 function SwapExperience({ onClose }: { onClose: () => void }) {
+  const { tx } = useTranslation();
   return (
     <div className="modal-content centered-result">
       <div className="swap-orb">
         <ArrowLeft size={20} />
         <ChevronRight size={20} />
       </div>
-      <span className="eyebrow">Preview only</span>
-      <h2 id="security-modal-title">Swap is resting today</h2>
+      <span className="eyebrow">{tx("Preview only")}</span>
+      <h2 id="security-modal-title">{tx("Swap is resting today")}</h2>
       <p>
-        This demo keeps the focus on reactive wallet security. No pricing,
-        liquidity, or real swap request is used.
+        {tx(
+          "This demo keeps the focus on reactive wallet security. No pricing, liquidity, or real swap request is used.",
+        )}
       </p>
       <button className="primary-button full-button" onClick={onClose}>
-        Back to Wallet
+        {tx("Back to Wallet")}
       </button>
       <SimulationNotice compact />
     </div>

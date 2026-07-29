@@ -6,6 +6,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import type { RiskLevel, TransactionStatus } from "@/types";
+import { useTranslation } from "@/hooks/useTranslation";
 
 interface StatusBadgeProps {
   value:
@@ -17,6 +18,7 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ value }: StatusBadgeProps) {
+  const { tx } = useTranslation();
   const normalized = value.toLowerCase().replaceAll(" ", "-");
   const Icon =
     value === "Low" || value === "Confirmed" || value === "Protected"
@@ -35,7 +37,7 @@ export function StatusBadge({ value }: StatusBadgeProps) {
   return (
     <span className={`status-badge status-${normalized}`}>
       <Icon size={13} aria-hidden="true" />
-      {value}
+      {tx(value)}
     </span>
   );
 }

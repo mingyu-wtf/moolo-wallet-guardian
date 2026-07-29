@@ -2,15 +2,21 @@ import {
   createRialoWorkflow,
   type RialoWorkflowKind,
 } from "@/lib/rialo";
+import {
+  fillSimulationRandomBytes,
+  generateSimulationId,
+} from "@/lib/random";
 import type { DemoTransaction, RiskAssessment, TokenSymbol } from "@/types";
 
-export function shortAddress(address: string): string {
+export function shortAddress(address: unknown): string {
+  if (typeof address !== "string" || address.length < 10) {
+    return "Unknown address";
+  }
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
 export function generateSimulationHash(): string {
-  const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
+  const bytes = fillSimulationRandomBytes(new Uint8Array(32));
   return `0x${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
 }
 
@@ -39,7 +45,7 @@ export function createDemoTransaction(
 ): DemoTransaction {
   const meta = generateSimulationMeta();
   return {
-    id: crypto.randomUUID(),
+    id: generateSimulationId(),
     ...meta,
     type: input.type ?? "Sent",
     token: input.token,
@@ -65,19 +71,50 @@ export function createDemoTransaction(
   };
 }
 
-export function formatCurrency(value: number): string {
+export function formatCurrency(value: unknown): string {
+  const safeValue =
+    typeof value === "number" && Number.isFinite(value) ? value : 0;
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 2,
-  }).format(value);
+  }).format(safeValue);
 }
 
-export function formatDateTime(value: number): string {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(value);
+export function formatDateTime(value: unknown): string {
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(value) ||
+    !Number.isFinite(new Date(value).getTime())
+  ) {
+    return "Unknown time";
+  }
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(value);
+  } catch {
+    return "Unknown time";
+  }
+}
+
+export function formatTime(value: unknown): string {
+  if (
+    typeof value !== "number" ||
+    !Number.isFinite(value) ||
+    !Number.isFinite(new Date(value).getTime())
+  ) {
+    return "Unknown time";
+  }
+  try {
+    return new Date(value).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "Unknown time";
+  }
 }
 
 export function isEvmAddress(value: string): boolean {
